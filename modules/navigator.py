@@ -77,11 +77,19 @@ class FileNavigator:
         return [item for item in all_items if item[0].lower().startswith(term)]
 
     def open_in_vim(self, filepath: str):
+        """Open vim in the current directory, even for new files."""
         curses.endwin()
         try:
+            # Change to current_path before launching vim
+            os.chdir(self.current_path)
             subprocess.call(["vim", filepath])
+            # Optionally change back (not strictly needed, but clean)
+            # os.chdir(os.path.dirname(os.path.realpath(__file__)))  # or original cwd
         except FileNotFoundError:
             pass
+        finally:
+            # Ensure we return to the correct dir for next operations
+            os.chdir(self.current_path)
 
     def open_terminal(self):
         try:
