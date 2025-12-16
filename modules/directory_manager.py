@@ -21,7 +21,6 @@ def pretty_path(path: str) -> str:
 class DirectoryManager:
     def __init__(self, start_path: str):
         self.current_path = os.path.realpath(start_path)
-        self.search_term = ""
 
     def change_directory(self, new_path: str):
         new_path = os.path.realpath(os.path.expanduser(new_path))
@@ -49,22 +48,5 @@ class DirectoryManager:
         return items_with_info
 
     def get_filtered_items(self):
-        all_items = self.get_items()
-        if not self.search_term:
-            return all_items
-        term = self.search_term.lower()
-        return [item for item in all_items if item[0].lower().startswith(term)]
-
-    def get_tab_completions(self, partial: str) -> list[str]:
-        if not partial:
-            return []
-        pattern = os.path.join(self.current_path, partial + "*")
-        matches = glob.glob(pattern)
-        rel_matches = []
-        for m in matches:
-            rel = os.path.basename(m)
-            if os.path.isdir(m):
-                rel += "/"
-            rel_matches.append(rel)
-        rel_matches.sort()
-        return rel_matches
+        # No search term anymore — just return all visible items
+        return self.get_items()
