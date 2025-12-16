@@ -34,6 +34,20 @@ class InputHandler:
                 self.nav.command_buffer = result
                 self.nav.cursor_pos = len(self.nav.command_buffer)
                 self.nav.completion.in_completion = False
+            elif 32 <= key <= 126:  # Printable ASCII characters
+                # Insert the typed character and restart completion (incremental narrowing)
+                char = chr(key)
+                self.nav.command_buffer = (
+                    self.nav.command_buffer[:self.nav.cursor_pos] +
+                    char +
+                    self.nav.command_buffer[self.nav.cursor_pos:]
+                )
+                self.nav.cursor_pos += 1
+                # Restart completion with the new partial
+                self.nav.completion.start_completion(self.nav.command_buffer, self.nav.cursor_pos)
+            else:
+                # Any other unhandled key: exit completion mode
+                self.nav.completion.in_completion = False
             self.pending_operator = None
             return
 

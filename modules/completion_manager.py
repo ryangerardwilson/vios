@@ -32,16 +32,7 @@ class CompletionManager:
         full_partial = os.path.join(self.base_dir, partial)
         matches = self.dir_manager.get_tab_completions(full_partial)
 
-        if len(matches) == 1:
-            full_path = os.path.join(self.dir_manager.current_path, self.base_dir, matches[0].rstrip("/"))
-            insert = pretty_path(full_path)
-            if matches[0].endswith("/"):
-                insert += "/"
-            self.in_completion = False
-            self.matches = []
-            return self.prefix + insert + " "
-
-        elif len(matches) > 1:
+        if len(matches) >= 1:
             self.matches = matches
             self.selected = 0
             self.in_completion = True
