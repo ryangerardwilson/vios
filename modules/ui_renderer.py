@@ -1,4 +1,3 @@
-# ~/Apps/vios/modules/ui_renderer.py
 import curses
 
 from .directory_manager import pretty_path
@@ -50,8 +49,8 @@ class UIRenderer:
                 except curses.error:
                     pass
 
-            # Bottom border with quit hint
-            quit_hint = "q / Esc to quit"
+            # Bottom border with close hint
+            quit_hint = "Press ? to close"
             bottom_border = "─".ljust(panel_width - len(quit_hint) - 2, "─") + " " + quit_hint + " "
             try:
                 stdscr.addstr(start_y + panel_height - 2, start_x, bottom_border[:panel_width], curses.color_pair(5) | curses.A_BOLD)

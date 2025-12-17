@@ -1,4 +1,3 @@
-# ~/Apps/vios/modules/input_handler.py
 import curses
 import os
 
@@ -21,40 +20,34 @@ class InputHandler:
             if key == ord('?'):
                 self.nav.show_help = False
                 return False
-            if key in (ord('q'), 27):
-                return True
             return False
 
         # === FILTER MODE ===
         if key == ord('/'):
             if self.in_filter_mode:
-                # Second / exits typing mode and clears filter
                 self.in_filter_mode = False
                 self.nav.dir_manager.filter_pattern = ""
             else:
-                # First / enters typing mode
                 self.in_filter_mode = True
                 self.nav.dir_manager.filter_pattern = ""
             return False
 
-        # Ctrl+R: clear filter and reload full list
         if key == 18:  # Ctrl+R
             self.in_filter_mode = False
             self.nav.dir_manager.filter_pattern = ""
             return False
 
-        # While actively typing the filter
         if self.in_filter_mode:
-            if key in (10, 13, curses.KEY_ENTER):  # Enter: persist filter, exit typing mode
+            if key in (10, 13, curses.KEY_ENTER):
                 self.in_filter_mode = False
                 return False
 
-            if key == 27:  # Esc: cancel and clear filter
+            if key == 27:  # Esc
                 self.in_filter_mode = False
                 self.nav.dir_manager.filter_pattern = ""
                 return False
 
-            if 32 <= key <= 126:  # Printable characters
+            if 32 <= key <= 126:
                 char = chr(key)
                 self.nav.dir_manager.filter_pattern += char
                 return False
@@ -64,13 +57,10 @@ class InputHandler:
                     self.nav.dir_manager.filter_pattern = self.nav.dir_manager.filter_pattern[:-1]
                 return False
 
-            # Any navigation key exits typing mode but keeps current filter applied
             if key in (ord('h'), ord('j'), ord('k'), ord('l'),
                        curses.KEY_UP, curses.KEY_DOWN, curses.KEY_LEFT, curses.KEY_RIGHT):
                 self.in_filter_mode = False
-                # Continue to normal navigation below
 
-        # Normal browser mode
         items = self.nav.dir_manager.get_filtered_items()
         total = len(items)
         self._clamp_selection(total)
@@ -82,7 +72,7 @@ class InputHandler:
             selected_name, selected_is_dir = items[self.nav.browser_selected]
             selected_path = os.path.join(self.nav.dir_manager.current_path, selected_name)
 
-        # Pending operators
+        # Pending operators (yy, dd)
         if self.pending_operator == 'd' and key == ord('d') and total > 0:
             try:
                 self.nav.clipboard.yank(selected_path, selected_name, selected_is_dir, cut=True)
@@ -128,6 +118,10 @@ class InputHandler:
             self.nav.open_terminal()
             return False
 
+        if key == ord('v'):
+            self.nav.create_new_file()
+            return False
+
         if key == 12:  # Ctrl+L
             self.nav.clipboard.cleanup()
             return False
@@ -136,10 +130,7 @@ class InputHandler:
             self.nav.show_help = True
             return False
 
-        if key in (ord('q'), 27):
-            return True
-
-        # Navigation — reset filter on directory change
+        # Navigation
         if key in (curses.KEY_UP, ord('k')) and total > 0:
             self.nav.browser_selected = (self.nav.browser_selected - 1) % total
         elif key in (curses.KEY_DOWN, ord('j')) and total > 0:
@@ -150,13 +141,13 @@ class InputHandler:
                 self.nav.dir_manager.current_path = parent
                 self.nav.browser_selected = 0
                 self.in_filter_mode = False
-                self.nav.dir_manager.filter_pattern = ""  # Reset on going up
+                self.nav.dir_manager.filter_pattern = ""
         elif key in (curses.KEY_RIGHT, ord('l'), 10, 13) and total > 0:
             if selected_is_dir:
                 self.nav.dir_manager.current_path = selected_path
                 self.nav.browser_selected = 0
                 self.in_filter_mode = False
-                self.nav.dir_manager.filter_pattern = ""  # Reset on drilling down
+                self.nav.dir_manager.filter_pattern = ""
             else:
                 self.nav.open_file(selected_path)
 

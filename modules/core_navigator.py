@@ -1,4 +1,3 @@
-# ~/Apps/vios/modules/core_navigator.py
 import curses
 import subprocess
 import os
@@ -53,7 +52,7 @@ File Opening
 Other
   t               Open terminal in current directory
   ?               Toggle this help
-  q / Esc         Quit the app
+  Ctrl+C          Quit the app
 """
 
     def open_file(self, filepath: str):
@@ -66,7 +65,6 @@ Other
 
         try:
             if mime_type == 'application/pdf':
-                # Open PDF with Zathura (detached)
                 subprocess.Popen([
                     "zathura", filepath
                 ],
@@ -76,21 +74,18 @@ Other
                 preexec_fn=os.setsid
                 )
             else:
-                # Assume text or fallback to Vim
                 subprocess.call([
                     "vim",
                     "-c", f"cd {self.dir_manager.current_path}",
                     filepath
                 ])
         except FileNotFoundError:
-            # If app not found, just continue silently
             pass
         finally:
             self.need_redraw = True
 
     def open_terminal(self):
         try:
-            # Open Alacritty in current directory, fully detached
             subprocess.Popen([
                 "setsid", "alacritty",
                 "--working-directory", self.dir_manager.current_path
@@ -101,7 +96,6 @@ Other
             )
         except FileNotFoundError:
             try:
-                # Fallback: generic terminal emulator
                 subprocess.Popen([
                     "setsid", "x-terminal-emulator",
                     "-e", f"cd {self.dir_manager.current_path} && exec $SHELL"
@@ -113,6 +107,77 @@ Other
             except FileNotFoundError:
                 curses.flash()
         self.need_redraw = True
+
+    def create_new_file(self):
+        """Prompt for filename and create an empty file in current directory."""
+        stdscr = self.renderer.stdscr
+        if not stdscr:
+            return
+
+        max_y, max_x = stdscr.getmaxyx()
+
+        # Safety: ensure we have at least 1 row and reasonable width
+        if max_y < 2 or max_x < 20:
+            curses.flash()
+            self.need_redraw = True
+            return
+
+        prompt = "New file: "
+        prompt_y = max_y - 1
+        prompt_x = 0
+
+        # Clear the bottom line first
+        stdscr.move(prompt_y, 0)
+        stdscr.clrtoeol()
+
+        # Write prompt safely
+        try:
+            stdscr.addstr(prompt_y, prompt_x, prompt[:max_x-1])
+        except curses.error:
+            pass  # Best effort
+
+        # Enable echo and cursor for input
+        curses.echo()
+        curses.curs_set(1)
+
+        # Get input — limit length to avoid overflow
+        input_x = len(prompt)
+        max_input_width = max_x - input_x - 1  # Leave 1 space buffer
+        if max_input_width < 10:
+            max_input_width = 10
+
+        try:
+            stdscr.move(prompt_y, input_x)
+            filename_bytes = stdscr.getstr(prompt_y, input_x, max_input_width)
+            filename = filename_bytes.decode('utf-8', errors='ignore').strip()
+        except KeyboardInterrupt:
+            filename = ""
+        except Exception:
+            filename = ""
+        finally:
+            curses.noecho()
+            curses.curs_set(0)
+
+        # Restore bottom line by forcing redraw
+        self.need_redraw = True
+
+        if not filename:
+            return
+
+        # Create file with unique name
+        unique_name = self.input_handler._get_unique_name(self.dir_manager.current_path, filename)
+        filepath = os.path.join(self.dir_manager.current_path, unique_name)
+
+        try:
+            with open(filepath, 'w'):  # 'w' instead of 'a' + close() ensures empty file
+                pass
+            os.utime(filepath, None)  # Update timestamp
+        except Exception as e:
+            # Optional: show error briefly
+            stdscr.addstr(prompt_y, 0, f"Error creating file: {str(e)[:max_x-20]}", curses.A_BOLD)
+            stdscr.clrtoeol()
+            stdscr.refresh()
+            stdscr.getch()  # Wait for keypress
 
     def run(self, stdscr):
         curses.curs_set(0)
@@ -134,6 +199,6 @@ Other
                 continue
 
             if self.input_handler.handle_key(stdscr, key):
-                break  # Quit
+                break  # Quit (though this should no longer be reached)
 
             self.need_redraw = True
