@@ -18,6 +18,7 @@ class DirectoryManager:
     # Allowed top-level hidden items when in ~
     ALLOWED_TOP_LEVEL_HIDDEN = {
         ".gitignore",
+        ".gitinclude",
         ".XCompose",
         ".bashrc",
         ".tmux.conf",
