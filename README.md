@@ -1,41 +1,51 @@
 # Vios - Vi Operating System
 
-*A minimal, Vim-inspired file navigator and terminal command runner for your 
-terminal.*
+*A minimal, Vim-inspired file navigator for your terminal.*
 
 Vios is a lightweight, hjkl-powered directory browser that feels like Vim for 
-your filesystem. Navigate folders, edit text files in Vim, yank/cut/paste 
-files, and run safe shell commands — all without leaving your terminal. It's 
-designed for speed and minimalism, perfect for power users.
+filesystem navigation. Navigate directories, open files in your preferred 
+editor, create new files, yank/cut/paste, and launch terminals — all from a 
+clean, fast curses interface.
 
-Built with Python and Curses, Vios turns your terminal into a "Vi Operating 
-System" for file management.
+Built with Python and curses, Vios turns your terminal into a "Vi-like 
+Operating System" focused purely on efficient file management.
 
 ## 1. Features
 
-- **Vim Keybindings**: Use `hjkl` to navigate directories and files.
-  - `l` / Enter: Enter directory or open text file in Vim.
-  - `h`: Go to parent directory.
-  - `j` / `k`: Move down/up in the list.
-- **Search**: Press `/` for live starts-with search (case-insensitive).
-- **Yank/Cut/Delete/Paste**:
-  - `yy`: Yank (copy) selected file/dir.
-  - `dd`: Cut (copy + delete).
-  - Backspace/Delete: Quick delete (no yank).
-  - `p`: Paste (with prompt for new name on conflict).
-- **Command Mode**: Press `i` to enter `: ` prompt.
-  - Run safe commands: `mkdir`, `mv`, `cp`, `rm`, `vim`/`v`.
-  - **Tab Auto-Completion**: Press Tab for filename/dir suggestions (cycles 
-    on multiple matches).
-  - Commands run silently and instantly — no prompts or output screens.
-- **Terminal Integration**: Press `t` to open Alacritty in the current 
-  directory.
-- **Pretty Paths**: Shows `~/path/to/dir` instead of full absolute paths.
-- **Minimal & Fast**: No dependencies beyond Python 3 and Alacritty/Vim 
-  (optional).
+- **Vim-style Navigation**:
+  - `h` — Go to parent directory (resets filter)
+  - `l` / `Enter` — Enter directory or open file
+  - `j` / `k` — Move down/up in selection
+- **Powerful Filtering** (glob-style):
+  - `/` — Enter filter mode
+    - Type pattern (e.g., `rat`, `*.py`, `*test*`)
+    - Implicit `*` at end if no wildcards used
+    - Press `Enter` to apply and persist
+    - Press `/` again or `Esc` to cancel/clear
+  - `Ctrl+R` — Clear filter instantly
+- **Clipboard Operations**:
+  - `yy` — Yank (copy) selected file/dir
+  - `dd` — Cut (move/delete original after paste)
+  - `Backspace` / `Delete` — Immediate cut (delete without yank)
+  - `p` — Paste yanked item (auto-renames on conflict, e.g., `file (1).txt`)
+  - `Ctrl+L` — Clear clipboard
+- **File Creation**:
+  - `v` — Create new empty file (prompts for filename at bottom)
+- **File Opening**:
+  - Text files (`.py`, `.txt`, `.md`, etc.) → opened in **Vim**
+  - PDF files → opened in **Zathura** (if available)
+- **Terminal Integration**:
+  - `t` — Open terminal (Alacritty preferred, falls back to default) in current 
+    directory
+- **Help Screen**:
+  - `?` — Toggle full-screen cheatsheet
+- **Quit**:
+  - `Ctrl+C` — Exit the application
+- **Pretty Paths**: Displays `~` for home directory
+- **Minimal & Fast**: No external dependencies beyond Python standard library
 
-Vios is perfect for Hyprland users — open a terminal with `Super+Return` 
-and it starts where you left off in Vios!
+Perfect for tiling window manager users (Hyprland, sway, etc.) who want a fast,
+modal file browser without leaving the terminal.
 
 ## 2. Installation
 
