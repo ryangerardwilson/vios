@@ -1,3 +1,4 @@
+# ~/Apps/vios/modules/ui_renderer.py
 import curses
 
 from .directory_manager import pretty_path
@@ -110,13 +111,25 @@ class UIRenderer:
                 except curses.error:
                     pass
 
-        # Status bar – shows /pattern when active or persisted
-        yank_text = (f"  CUT: {self.nav.clipboard.yanked_original_name}"
-                     f"{'/' if self.nav.clipboard.yanked_is_dir else ''}"
-                     if self.nav.clipboard.yanked_temp_path else "")
-        filter_text = f"  /{self.nav.dir_manager.filter_pattern}" if self.nav.dir_manager.filter_pattern else ""
+        # === STATUS BAR ===
+        yank_text = ""
+        if self.nav.clipboard.yanked_temp_path:
+            yank_text = f"  CUT: {self.nav.clipboard.yanked_original_name}"
+            if self.nav.clipboard.yanked_is_dir:
+                yank_text += "/"
+
+        # Filter text: intelligently show the leading / only once
+        filter_text = ""
+        if self.nav.dir_manager.filter_pattern:
+            pattern = self.nav.dir_manager.filter_pattern
+            if pattern.startswith("/"):
+                filter_text = f"  {pattern}"          # Already has leading / (from input handler)
+            else:
+                filter_text = f"  /{pattern}"         # Add leading / for persisted filters without it
+
         help_hint = "  ? help" if not self.nav.show_help else ""
         status = f"[HJKL]{help_hint}{filter_text}{yank_text}"
+
         try:
             stdscr.addstr(max_y - 1, 0, status[:max_x-1], curses.color_pair(5) | curses.A_BOLD)
         except curses.error:

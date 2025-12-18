@@ -103,18 +103,34 @@ class DirectoryManager:
         return visible_items
 
     def _normalize_pattern(self, pattern: str) -> str:
-        if not pattern:
-            return ""
+        pattern = pattern.strip()
+        if not pattern or pattern == "/":
+            return ""  # Will be treated as no filter
         if any(c in pattern for c in "*?[]"):
             return pattern
         return pattern + "*"
 
     def get_filtered_items(self):
         all_items = self.get_items()
+
         if not self.filter_pattern:
             return all_items
-        pattern = self._normalize_pattern(self.filter_pattern).lower()
+
+        # Extract the actual search pattern: everything after the leading '/' if present
+        if self.filter_pattern.startswith("/"):
+            search_pattern = self.filter_pattern[1:]  # Remove the visual '/'
+        else:
+            search_pattern = self.filter_pattern
+
+        if not search_pattern:
+            return all_items  # Just '/' or empty → show all
+
+        # Normalize for matching (add * if no glob chars)
+        normalized = self._normalize_pattern(search_pattern)
+
+        # Apply case-insensitive fnmatch
+        pattern_lower = normalized.lower()
         return [
             item for item in all_items
-            if fnmatch.fnmatch(item[0].lower(), pattern)
+            if fnmatch.fnmatch(item[0].lower(), pattern_lower)
         ]

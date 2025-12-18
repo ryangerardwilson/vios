@@ -12,13 +12,6 @@ class InputHandler:
         self.operator_timeout = 1.0      # Seconds allowed for the second key
         self.in_filter_mode = False
 
-    def _normalize_pattern(self, pattern: str) -> str:
-        if not pattern:
-            return ""
-        if any(c in pattern for c in "*?[]"):
-            return pattern
-        return pattern + "*"
-
     def _check_operator_timeout(self):
         """Cancel pending operator if too much time has passed."""
         if self.pending_operator and (time.time() - self.operator_timestamp > self.operator_timeout):
@@ -34,11 +27,13 @@ class InputHandler:
         # === FILTER MODE ===
         if key == ord('/'):
             if self.in_filter_mode:
+                # Second /: cancel and clear filter
                 self.in_filter_mode = False
                 self.nav.dir_manager.filter_pattern = ""
             else:
+                # Enter filter mode: show '/' immediately for visual feedback
                 self.in_filter_mode = True
-                self.nav.dir_manager.filter_pattern = ""
+                self.nav.dir_manager.filter_pattern = "/"   # Visual placeholder
             return False
 
         if key == 18:  # Ctrl+R
@@ -49,6 +44,9 @@ class InputHandler:
         if self.in_filter_mode:
             if key in (10, 13, curses.KEY_ENTER):
                 self.in_filter_mode = False
+                # If only the placeholder remains, clear it (no actual filter applied)
+                if self.nav.dir_manager.filter_pattern == "/":
+                    self.nav.dir_manager.filter_pattern = ""
                 return False
 
             if key == 27:  # Esc
@@ -58,17 +56,32 @@ class InputHandler:
 
             if 32 <= key <= 126:
                 char = chr(key)
-                self.nav.dir_manager.filter_pattern += char
+                pattern = self.nav.dir_manager.filter_pattern
+                if pattern == "/":
+                    # First real character: start the actual pattern
+                    self.nav.dir_manager.filter_pattern = "/" + char
+                else:
+                    self.nav.dir_manager.filter_pattern += char
                 return False
 
             if key in (curses.KEY_BACKSPACE, 127, 8):
-                if self.nav.dir_manager.filter_pattern:
-                    self.nav.dir_manager.filter_pattern = self.nav.dir_manager.filter_pattern[:-1]
+                pattern = self.nav.dir_manager.filter_pattern
+                if len(pattern) > 1:
+                    # Remove last character, keep the leading /
+                    self.nav.dir_manager.filter_pattern = pattern[:-1]
+                elif pattern == "/":
+                    # Backspace on just '/' exits filter mode
+                    self.in_filter_mode = False
+                    self.nav.dir_manager.filter_pattern = ""
                 return False
 
+            # Navigation keys exit filter mode
             if key in (ord('h'), ord('j'), ord('k'), ord('l'),
                        curses.KEY_UP, curses.KEY_DOWN, curses.KEY_LEFT, curses.KEY_RIGHT):
                 self.in_filter_mode = False
+                # Keep current filter pattern if any real text was typed
+                if self.nav.dir_manager.filter_pattern == "/":
+                    self.nav.dir_manager.filter_pattern = ""
 
         items = self.nav.dir_manager.get_filtered_items()
         total = len(items)
@@ -93,7 +106,7 @@ class InputHandler:
             self.pending_operator = None
             return False
 
-        # Handle completion of yy (yank/copy) – kept for consistency
+        # Handle completion of yy (yank/copy)
         if self.pending_operator == 'y' and key == ord('y') and total > 0:
             try:
                 self.nav.clipboard.yank(selected_path, selected_name, selected_is_dir, cut=False)
@@ -114,7 +127,6 @@ class InputHandler:
             return False
 
         # Any other key cancels a pending single-letter operator
-        # (this ensures only quick dd works)
         if self.pending_operator in ('d', 'y'):
             self.pending_operator = None
 
