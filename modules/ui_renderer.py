@@ -16,6 +16,7 @@ class UIRenderer:
         max_y, max_x = stdscr.getmaxyx()
         stdscr.clear()
 
+        # === HELP SCREEN ===
         if self.nav.show_help:
             lines = [line.rstrip() for line in self.nav.cheatsheet.strip().split('\n')]
             content_height = len(lines)
@@ -67,7 +68,7 @@ class UIRenderer:
             stdscr.refresh()
             return
 
-        # Current path
+        # === NORMAL VIEW ===
         display_path = DirectoryManager.pretty_path(self.nav.dir_manager.current_path)
         try:
             stdscr.addstr(0, max(0, (max_x - len(display_path)) // 2),
@@ -75,27 +76,40 @@ class UIRenderer:
         except curses.error:
             pass
 
-        # File list with scrolling
         list_start_y = 2
         available_height = max_y - list_start_y - 1
 
         items = self.nav.dir_manager.get_filtered_items()
         total = len(items)
 
-        # Update scroll offset to keep selection in view (centered when possible)
         if total > 0:
-            half = available_height // 2
-            desired = max(0, self.nav.browser_selected - half)
-            max_offset = max(0, total - available_height)
-            self.nav.list_offset = min(desired, max_offset)
+            # Stable follow-scrolling with buffer at bottom
+            min_lines_below = 3  # Try to keep at least 3 lines visible below selection
 
-        visible_items = items[self.nav.list_offset : self.nav.list_offset + available_height]
+            # If selection is too close to bottom of current view
+            current_bottom = self.nav.list_offset + available_height - 1
+            lines_below = total - 1 - self.nav.browser_selected
+
+            if lines_below < min_lines_below and self.nav.browser_selected > current_bottom - min_lines_below:
+                # Not enough lines below — pull view up to show more context if possible
+                desired_offset = max(0, self.nav.browser_selected - (available_height - min_lines_below - 1))
+                self.nav.list_offset = desired_offset
+            elif self.nav.browser_selected < self.nav.list_offset:
+                # Scrolled above view
+                self.nav.list_offset = self.nav.browser_selected
+            elif self.nav.browser_selected >= self.nav.list_offset + available_height:
+                # Scrolled below view
+                self.nav.list_offset = self.nav.browser_selected - available_height + 1
+
+            # Final clamp
+            self.nav.list_offset = max(0, min(self.nav.list_offset, max(0, total - available_height)))
+        else:
+            self.nav.list_offset = 0
+
+        visible_items = items[self.nav.list_offset:self.nav.list_offset + available_height]
 
         if total == 0:
-            if self.nav.dir_manager.filter_pattern:
-                msg = "(no matches)"
-            else:
-                msg = "(empty directory)"
+            msg = "(no matches)" if self.nav.dir_manager.filter_pattern else "(empty directory)"
             try:
                 stdscr.addstr(list_start_y + available_height // 2,
                               max(0, (max_x - len(msg)) // 2), msg, curses.color_pair(3))
@@ -114,7 +128,7 @@ class UIRenderer:
                 except curses.error:
                     pass
 
-        # Status bar
+        # === STATUS BAR ===
         yank_text = ""
         if self.nav.clipboard.yanked_temp_path:
             yank_text = f"  CUT: {self.nav.clipboard.yanked_original_name}"
@@ -123,8 +137,7 @@ class UIRenderer:
 
         filter_text = ""
         if self.nav.dir_manager.filter_pattern:
-            pattern = self.nav.dir_manager.filter_pattern
-            filter_text = f"  {pattern}" if pattern.startswith("/") else f"  /{pattern}"
+            filter_text = f"  /{self.nav.dir_manager.filter_pattern}"
 
         hidden_indicator = self.nav.dir_manager.get_hidden_status_text()
         help_hint = "  ? help" if not self.nav.show_help else ""

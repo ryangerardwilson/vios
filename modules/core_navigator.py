@@ -19,7 +19,7 @@ class FileNavigator:
 
         self.show_help = False
         self.browser_selected = 0
-        self.list_offset = 0          # <<< NEW: scroll offset for long lists
+        self.list_offset = 0            # Scroll offset for long lists
         self.need_redraw = True
 
         self.cheatsheet = r"""
@@ -30,6 +30,8 @@ Navigation
   l / Enter       Enter directory (resets filter) or open file
   j               Down
   k               Up
+  ,k              Jump to top
+  ,j              Jump to bottom
 
 Filtering (glob-style)
   /               Enter filter mode (type pattern)
@@ -37,7 +39,7 @@ Filtering (glob-style)
                   • "*.py" → all Python files
                   • "*test*" → contains "test"
                   • Press Enter to apply and persist filter
-                  • Press / again or Esc to cancel and clear
+                  • Press / again to clear filter
   Ctrl+R          Clear filter and show all items
 
 Clipboard
@@ -124,13 +126,12 @@ Other
 
         prompt = "New file: "
         prompt_y = max_y - 1
-        prompt_x = 0
 
         stdscr.move(prompt_y, 0)
         stdscr.clrtoeol()
 
         try:
-            stdscr.addstr(prompt_y, prompt_x, prompt[:max_x-1])
+            stdscr.addstr(prompt_y, 0, prompt[:max_x-1])
         except curses.error:
             pass
 

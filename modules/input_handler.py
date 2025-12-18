@@ -38,16 +38,13 @@ class InputHandler:
         # === PRESSING / : ENTER OR CANCEL FILTER ===
         if key == ord('/'):
             if self.in_filter_mode:
-                # Already typing → cancel everything
                 self.in_filter_mode = False
                 self.nav.dir_manager.filter_pattern = ""
             elif self.nav.dir_manager.filter_pattern:
-                # Not typing, but a filter is active → clear it (cancel)
                 self.nav.dir_manager.filter_pattern = ""
             else:
-                # No filter active → enter fresh filter mode
                 self.in_filter_mode = True
-                self.nav.dir_manager.filter_pattern = "/"   # Visual placeholder
+                self.nav.dir_manager.filter_pattern = "/"
             return False
 
         if key == 18:  # Ctrl+R
@@ -55,16 +52,12 @@ class InputHandler:
             self.nav.dir_manager.filter_pattern = ""
             return False
 
-        # === INPUT WHILE IN FILTER MODE ===
         if self.in_filter_mode:
             if key in (10, 13, curses.KEY_ENTER):
-                # Apply filter: strip visual '/' and exit mode
                 self.in_filter_mode = False
                 pattern = self.nav.dir_manager.filter_pattern
                 if pattern.startswith("/"):
-                    # Remove the leading '/' that was only for visual feedback
                     self.nav.dir_manager.filter_pattern = pattern[1:]
-                # If nothing was typed, clear it
                 if not self.nav.dir_manager.filter_pattern:
                     self.nav.dir_manager.filter_pattern = ""
                 return False
@@ -92,16 +85,13 @@ class InputHandler:
                     self.nav.dir_manager.filter_pattern = ""
                 return False
 
-            # Navigation keys exit typing mode but keep the current pattern
             if key in (ord('h'), ord('j'), ord('k'), ord('l'),
                        curses.KEY_UP, curses.KEY_DOWN, curses.KEY_LEFT, curses.KEY_RIGHT):
                 self.in_filter_mode = False
-                # If only placeholder, clear pattern
                 if self.nav.dir_manager.filter_pattern == "/":
                     self.nav.dir_manager.filter_pattern = ""
 
         else:
-            # === COMMA COMMANDS ===
             if key == ord(','):
                 self.pending_comma = True
                 self.comma_timestamp = time.time()
@@ -121,15 +111,18 @@ class InputHandler:
                 else:
                     self.pending_comma = False
 
-            # === DOT TOGGLE ===
             if key == ord('.'):
                 self.nav.dir_manager.toggle_hidden()
                 return False
 
-        # === NORMAL NAVIGATION AND COMMANDS ===
+        # === NORMAL NAVIGATION ===
         items = self.nav.dir_manager.get_filtered_items()
         total = len(items)
-        self._clamp_selection(total)
+
+        if total == 0:
+            self.nav.browser_selected = 0
+        else:
+            self.nav.browser_selected = max(0, min(self.nav.browser_selected, total - 1))
 
         selected_name = None
         selected_is_dir = False
@@ -138,7 +131,7 @@ class InputHandler:
             selected_name, selected_is_dir = items[self.nav.browser_selected]
             selected_path = os.path.join(self.nav.dir_manager.current_path, selected_name)
 
-        # Operators
+        # Operators (unchanged)
         if self.pending_operator == 'd' and key == ord('d') and total > 0:
             try:
                 self.nav.clipboard.yank(selected_path, selected_name, selected_is_dir, cut=True)
@@ -195,7 +188,7 @@ class InputHandler:
             self.nav.show_help = True
             return False
 
-        # Navigation
+        # === WRAPPING J/K NAVIGATION (restored as requested) ===
         if key in (curses.KEY_UP, ord('k')) and total > 0:
             self.nav.browser_selected = (self.nav.browser_selected - 1) % total
         elif key in (curses.KEY_DOWN, ord('j')) and total > 0:
@@ -217,12 +210,6 @@ class InputHandler:
                 self.nav.open_file(selected_path)
 
         return False
-
-    def _clamp_selection(self, total):
-        if total == 0:
-            self.nav.browser_selected = 0
-        else:
-            self.nav.browser_selected = min(self.nav.browser_selected, total - 1)
 
     def _get_unique_name(self, dest_dir: str, base_name: str) -> str:
         dest_path = os.path.join(dest_dir, base_name)
