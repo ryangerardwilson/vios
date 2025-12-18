@@ -1,8 +1,7 @@
 # ~/Apps/vios/modules/ui_renderer.py
 import curses
 
-from .directory_manager import pretty_path
-
+from .directory_manager import DirectoryManager
 
 class UIRenderer:
     def __init__(self, navigator):
@@ -74,7 +73,9 @@ class UIRenderer:
 
         # === NORMAL BROWSER VIEW ===
         # Current path centered at top
-        display_path = pretty_path(self.nav.dir_manager.current_path)
+        # display_path = pretty_path(self.nav.dir_manager.current_path)
+        display_path = DirectoryManager.pretty_path(self.nav.dir_manager.current_path)
+
         try:
             stdscr.addstr(0, max(0, (max_x - len(display_path)) // 2),
                           display_path[:max_x], curses.color_pair(2) | curses.A_BOLD)

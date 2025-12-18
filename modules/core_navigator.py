@@ -2,7 +2,7 @@ import curses
 import subprocess
 import os
 
-from .directory_manager import DirectoryManager, pretty_path
+from .directory_manager import DirectoryManager
 from .clipboard_manager import ClipboardManager
 from .ui_renderer import UIRenderer
 from .input_handler import InputHandler

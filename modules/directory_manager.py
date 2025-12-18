@@ -3,19 +3,7 @@ import os
 import fnmatch
 
 
-def pretty_path(path: str) -> str:
-    home = os.path.expanduser("~")
-    if path.startswith(home):
-        return "~" + path[len(home):] if path != home else "~"
-    return path
-
-
 class DirectoryManager:
-    def __init__(self, start_path: str):
-        self.current_path = os.path.realpath(start_path)
-        self.filter_pattern = ""  # Raw pattern as typed by user
-
-    # Allowed top-level hidden items when in ~
     ALLOWED_TOP_LEVEL_HIDDEN = {
         ".gitignore",
         ".gitinclude",
@@ -28,10 +16,9 @@ class DirectoryManager:
         ".sqlfluff",
         ".ssh",
         ".local",
-        ".config",  # Must keep to allow entering .config
+        ".config",
     }
 
-    # STRICT whitelist: ONLY these items are visible inside ~/.config
     ALLOWED_IN_CONFIG = {
         "alacritty",
         "rtutor",
@@ -40,14 +27,36 @@ class DirectoryManager:
         "hypr",
         "waybar",
         "zathura",
-        # Add more here if needed
+        # Add more as needed
     }
 
+    def __init__(self, start_path: str):
+        self.current_path = os.path.realpath(start_path)
+        self.filter_pattern = ""
+
+        self.home_path = os.path.realpath(os.path.expanduser("~"))
+        self.config_path = os.path.realpath(os.path.join(self.home_path, ".config"))
+
+    @classmethod
+    def pretty_path(cls, path: str) -> str:
+        home = os.path.expanduser("~")
+        real_home = os.path.realpath(home)
+        real_path = os.path.realpath(path)
+
+        if real_path.startswith(real_home):
+            if real_path == real_home:
+                return "~"
+            return "~" + real_path[len(real_home):]
+        return path
+
     def _is_home_dir(self) -> bool:
-        return os.path.realpath(self.current_path) == os.path.realpath(os.path.expanduser("~"))
+        return self.current_path == self.home_path
 
     def _is_config_dir(self) -> bool:
-        return os.path.realpath(self.current_path) == os.path.realpath(os.path.expanduser("~/.config"))
+        return self.current_path == self.config_path
+
+    def _is_inside_config(self) -> bool:
+        return self.current_path.startswith(self.config_path + os.sep)
 
     def get_items(self):
         try:
@@ -69,33 +78,32 @@ class DirectoryManager:
                 continue
 
             is_dir = os.path.isdir(full_path)
+            is_hidden = item.startswith(".")
 
-            # Filtering logic
+            # Visibility rules
             if is_home:
-                if item.startswith(".") and item not in self.ALLOWED_TOP_LEVEL_HIDDEN:
+                if is_hidden and item not in self.ALLOWED_TOP_LEVEL_HIDDEN:
                     continue
             elif is_config:
                 if item not in self.ALLOWED_IN_CONFIG:
                     continue
-            else:
-                # Outside home and .config: hide all hidden items
-                if item.startswith("."):
-                    continue
+            # Else: everywhere else (including inside ~/.config subdirs) → show everything
 
             visible_items.append((item, is_dir))
 
-        # Custom sorting as requested:
+        # Custom sorting: 
         # 1. Non-hidden dirs
         # 2. Non-hidden files
         # 3. Hidden dirs
         # 4. Hidden files
+        # All groups sorted alphabetically (case-insensitive)
         def sort_key(entry):
             name, is_dir = entry
             hidden = name.startswith(".")
             if hidden:
-                group = 2 if is_dir else 3
+                group = 2 if is_dir else 3   # hidden dirs = 2, hidden files = 3
             else:
-                group = 0 if is_dir else 1
+                group = 0 if is_dir else 1   # non-hidden dirs = 0, non-hidden files = 1
             return (group, name.lower())
 
         visible_items.sort(key=sort_key)
@@ -105,7 +113,7 @@ class DirectoryManager:
     def _normalize_pattern(self, pattern: str) -> str:
         pattern = pattern.strip()
         if not pattern or pattern == "/":
-            return ""  # Will be treated as no filter
+            return ""
         if any(c in pattern for c in "*?[]"):
             return pattern
         return pattern + "*"
@@ -116,20 +124,14 @@ class DirectoryManager:
         if not self.filter_pattern:
             return all_items
 
-        # Extract the actual search pattern: everything after the leading '/' if present
-        if self.filter_pattern.startswith("/"):
-            search_pattern = self.filter_pattern[1:]  # Remove the visual '/'
-        else:
-            search_pattern = self.filter_pattern
+        search_pattern = self.filter_pattern[1:] if self.filter_pattern.startswith("/") else self.filter_pattern
 
         if not search_pattern:
-            return all_items  # Just '/' or empty → show all
+            return all_items
 
-        # Normalize for matching (add * if no glob chars)
         normalized = self._normalize_pattern(search_pattern)
-
-        # Apply case-insensitive fnmatch
         pattern_lower = normalized.lower()
+
         return [
             item for item in all_items
             if fnmatch.fnmatch(item[0].lower(), pattern_lower)
