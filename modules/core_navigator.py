@@ -88,28 +88,29 @@ Other
             self.need_redraw = True
 
     def open_terminal(self):
+        import subprocess
+
+        # Get the current directory (absolute path)
+        current_dir = self.dir_manager.current_path
+
+        # Copy "cd /path/to/current/dir" to Wayland clipboard
+        cd_command = f"cd \"{current_dir}\""
+
         try:
-            subprocess.Popen([
-                "setsid", "alacritty",
-                "--working-directory", self.dir_manager.current_path
-            ],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            stdin=subprocess.DEVNULL
+            subprocess.run(
+                ["wl-copy", cd_command],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
             )
         except FileNotFoundError:
-            try:
-                subprocess.Popen([
-                    "setsid", "x-terminal-emulator",
-                    "-e", f"cd {self.dir_manager.current_path} && exec $SHELL"
-                ],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                stdin=subprocess.DEVNULL
-                )
-            except FileNotFoundError:
-                curses.flash()
-        self.need_redraw = True
+            # wl-copy not available (e.g. not on Wayland or not installed) — silently ignore
+            pass
+        except Exception:
+            pass  # Any other error — just continue to quit
+
+        # Now quit the application cleanly — same as Ctrl+C
+        raise KeyboardInterrupt  # This will be caught in main() and exit gracefully
 
     def create_new_file(self):
         stdscr = self.renderer.stdscr
