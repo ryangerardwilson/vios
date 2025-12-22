@@ -22,9 +22,8 @@ class FileNavigator:
         self.list_offset = 0
         self.need_redraw = True
 
-        # Multi-mark support
-        self.marked_items = set()           # set of (name, is_dir)
-        self.mark_source_dir = None         # Directory where marks were made
+        # Multi-mark support — now using full absolute paths
+        self.marked_items = set()  # set of str (absolute paths)
 
         self.cheatsheet = r"""
 VIOS CHEATSHEET

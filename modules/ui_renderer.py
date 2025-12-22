@@ -1,5 +1,6 @@
 import curses
 from .directory_manager import DirectoryManager
+import os
 
 
 class UIRenderer:
@@ -22,9 +23,8 @@ class UIRenderer:
                 pass
 
         if self.nav.show_help:
-            # Keep your existing help screen code
             lines = [line.rstrip() for line in self.nav.cheatsheet.strip().split('\n')]
-            # ... your existing help rendering ...
+            # ... your existing help rendering (unchanged) ...
             stdscr.refresh()
             return
 
@@ -75,7 +75,8 @@ class UIRenderer:
                 global_idx = self.nav.list_offset + i
 
                 arrow = "> " if global_idx == self.nav.browser_selected else "  "
-                mark  = "✓ " if (name, is_dir) in self.nav.marked_items else "  "
+                current_full_path = os.path.join(self.nav.dir_manager.current_path, name)
+                mark  = "✓ " if current_full_path in self.nav.marked_items else "  "
                 prefix = arrow + mark
 
                 color = (curses.color_pair(1) | curses.A_BOLD

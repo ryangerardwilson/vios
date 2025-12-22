@@ -87,20 +87,19 @@ class InputHandler:
             selected_name, selected_is_dir = items[self.nav.browser_selected]
             selected_path = os.path.join(self.nav.dir_manager.current_path, selected_name)
 
-        # === Toggle mark with 'm' ===
+        # === Toggle mark with 'm' — now using full path ===
         if key == ord('m'):
             if total > 0:
-                item = (selected_name, selected_is_dir)
-                if item in self.nav.marked_items:
-                    self.nav.marked_items.remove(item)
+                full_path = selected_path
+                if full_path in self.nav.marked_items:
+                    self.nav.marked_items.remove(full_path)
                 else:
-                    self.nav.marked_items.add(item)
-                    if len(self.nav.marked_items) == 1:
-                        self.nav.mark_source_dir = self.nav.dir_manager.current_path
+                    self.nav.marked_items.add(full_path)
+                # Auto-advance after marking
                 self.nav.browser_selected = (self.nav.browser_selected + 1) % total
             return False
 
-        # === CREATE NEW FILE with 'v' — EXACTLY LIKE ORIGINAL ===
+        # === CREATE NEW FILE with 'v' ===
         if key == ord('v'):
             self.nav.create_new_file()
             return False
@@ -212,7 +211,7 @@ class InputHandler:
 
         return False
 
-    # === Multi-mark operations (unchanged from working version) ===
+    # === Updated multi-mark operations using full paths ===
     def _copy_marked(self):
         self._move_or_copy_marked(copy_only=True)
 
@@ -220,70 +219,65 @@ class InputHandler:
         self._move_or_copy_marked(copy_only=False)
 
     def _delete_marked(self):
-        if not self.nav.marked_items or self.nav.mark_source_dir is None:
+        if not self.nav.marked_items:
             curses.flash()
             return
 
-        source_dir = self.nav.mark_source_dir
         success = True
-
-        for name, is_dir in self.nav.marked_items:
-            path = os.path.join(source_dir, name)
+        for full_path in list(self.nav.marked_items):
             try:
-                if is_dir:
-                    shutil.rmtree(path)
+                if os.path.isdir(full_path):
+                    shutil.rmtree(full_path)
                 else:
-                    os.remove(path)
+                    os.remove(full_path)
             except Exception:
                 success = False
                 break
 
         if success:
             self.nav.marked_items.clear()
-            self.nav.mark_source_dir = None
         else:
             curses.flash()
 
         self.nav.need_redraw = True
 
     def _move_or_copy_marked(self, copy_only: bool):
-        if not self.nav.marked_items or self.nav.mark_source_dir is None:
+        if not self.nav.marked_items:
             curses.flash()
             return
 
         dest_dir = self.nav.dir_manager.current_path
-        source_dir = self.nav.mark_source_dir
         success = True
 
-        for name, is_dir in self.nav.marked_items:
-            src_path = os.path.join(source_dir, name)
-            dest_path = os.path.join(dest_dir, name)
-
-            if not os.path.exists(src_path):
+        for full_path in list(self.nav.marked_items):
+            if not os.path.exists(full_path):
                 success = False
                 break
 
+            name = os.path.basename(full_path)
+            dest_path = os.path.join(dest_dir, name)
+
             try:
+                # Remove existing destination if it exists (overwrite)
                 if os.path.exists(dest_path):
-                    if is_dir:
+                    if os.path.isdir(dest_path):
                         shutil.rmtree(dest_path)
                     else:
                         os.remove(dest_path)
 
                 if copy_only:
-                    if is_dir:
-                        shutil.copytree(src_path, dest_path)
+                    if os.path.isdir(full_path):
+                        shutil.copytree(full_path, dest_path)
                     else:
-                        shutil.copy2(src_path, dest_path)
+                        shutil.copy2(full_path, dest_path)
                 else:
-                    shutil.move(src_path, dest_path)
+                    shutil.move(full_path, dest_path)
             except Exception:
                 success = False
                 break
 
         if success:
             self.nav.marked_items.clear()
-            self.nav.mark_source_dir = None
         else:
             curses.flash()
 
