@@ -149,12 +149,8 @@ class InputHandler:
 
         # === Single-item paste (only when no marks) ===
         if key == ord('p') and self.nav.clipboard.yanked_temp_path:
-            new_name = self._get_unique_name(
-                self.nav.dir_manager.current_path,
-                self.nav.clipboard.yanked_original_name
-            )
             try:
-                self.nav.clipboard.paste(self.nav.dir_manager.current_path, new_name)
+                self.nav.clipboard.paste(self.nav.dir_manager.current_path)
             except Exception:
                 curses.flash()
             return False

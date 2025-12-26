@@ -1,3 +1,4 @@
+# ~/Apps/vios/modules/clipboard_manager.py
 import os
 import shutil
 import tempfile
@@ -56,6 +57,13 @@ class ClipboardManager:
 
         dest_name = new_name or self.yanked_original_name
         dest_path = os.path.join(dest_dir, dest_name)
+
+        # Overwrite: Remove existing destination if it exists
+        if os.path.exists(dest_path):
+            if os.path.isdir(dest_path):
+                shutil.rmtree(dest_path)
+            else:
+                os.remove(dest_path)
 
         try:
             if self.yanked_is_dir:
