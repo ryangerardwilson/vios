@@ -1,4 +1,4 @@
-# ~/Apps/vios/constants.py
+# ~/Apps/vios/modules/constants.py
 class Constants:
     CHEATSHEET = r"""
 VIOS CHEATSHEET
@@ -36,6 +36,7 @@ File Opening
 Other
   v               Create new file
   nd              Create new directory
+  rn              Rename selected item
   t               Open terminal in current directory
   .               Toggle show hidden files/dirs
   ?               Toggle this help
