@@ -155,7 +155,7 @@ class InputHandler:
                 curses.flash()
             return False
 
-        # === yy / dd / nd / rn operators ===
+        # === yy / dd / nd / nf / rn operators ===
         if self.pending_operator == 'd' and key == ord('d') and total > 0:
             try:
                 self.nav.clipboard.yank(selected_path, selected_name, selected_is_dir, cut=True)
@@ -174,6 +174,11 @@ class InputHandler:
 
         if self.pending_operator == 'n' and key == ord('d'):
             self.nav.create_new_directory()
+            self.pending_operator = None
+            return False
+
+        if self.pending_operator == 'n' and key == ord('f'):
+            self.nav.create_new_file_no_open()
             self.pending_operator = None
             return False
 

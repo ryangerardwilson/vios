@@ -23,7 +23,6 @@ Filtering (glob-style)
 Clipboard & Multi Operations
   y               Start yank (copy) — yy to confirm
   d               Delete marked items OR start cut/delete — dd to confirm
-  Backspace/Del   Immediate cut selected item
   m               Toggle mark on current item (✓) — auto-advance
   p               Copy marked items here (overwrite) OR paste single clipboard
   x               Cut/move marked items here (overwrite)
@@ -34,7 +33,8 @@ File Opening
   • PDF files → Zathura
 
 Other
-  v               Create new file
+  v               Create new file and open in Vim
+  nf              Create new file (no open)
   nd              Create new directory
   rn              Rename selected item
   t               Open terminal in current directory

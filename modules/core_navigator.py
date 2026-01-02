@@ -197,6 +197,95 @@ class FileNavigator:
         # Open the newly created file in Vim
         self.open_file(filepath)
 
+    def create_new_file_no_open(self):
+        stdscr = self.renderer.stdscr
+        if not stdscr:
+            return
+
+        max_y, max_x = stdscr.getmaxyx()
+
+        if max_y < 2 or max_x < 20:
+            curses.flash()
+            self.need_redraw = True
+            return
+
+        prompt = "New file: "
+        prompt_y = max_y - 1
+
+        stdscr.move(prompt_y, 0)
+        stdscr.clrtoeol()
+
+        try:
+            stdscr.addstr(prompt_y, 0, prompt[:max_x-1])
+        except curses.error:
+            pass
+
+        try:
+            stdscr.timeout(-1)  # Block indefinitely for user input
+            # No curs_set(1) - keep cursor hidden, like filter mode
+
+            input_x = len(prompt)
+            max_input_width = max_x - input_x - 1
+            if max_input_width < 10:
+                max_input_width = 10
+
+            input_str = ""
+
+            # Initial draw
+            stdscr.move(prompt_y, 0)
+            stdscr.clrtoeol()
+            stdscr.addstr(prompt_y, 0, prompt + input_str)
+            stdscr.refresh()
+
+            while True:
+                key = stdscr.getch()
+
+                if key in (10, 13, curses.KEY_ENTER):  # Enter to confirm
+                    break
+                elif key == 27:  # Esc to cancel
+                    input_str = ""
+                    break
+                elif key in (curses.KEY_BACKSPACE, 127, 8):  # Backspace
+                    if input_str:
+                        input_str = input_str[:-1]
+                elif 32 <= key <= 126:  # Printable ASCII characters only
+                    if len(input_str) < max_input_width:
+                        char = chr(key)
+                        input_str += char
+
+                # Redraw the entire prompt line
+                stdscr.move(prompt_y, 0)
+                stdscr.clrtoeol()
+                display_str = prompt + input_str
+                stdscr.addstr(prompt_y, 0, display_str[:max_x-1])
+                stdscr.refresh()
+
+            filename = input_str.strip()
+        except KeyboardInterrupt:
+            filename = ""
+        except Exception:
+            filename = ""
+        finally:
+            stdscr.timeout(40)  # Restore run()'s timeout
+            self.need_redraw = True
+
+        if not filename:
+            return
+
+        unique_name = self.input_handler._get_unique_name(self.dir_manager.current_path, filename)
+        filepath = os.path.join(self.dir_manager.current_path, unique_name)
+
+        try:
+            with open(filepath, 'w'):
+                pass
+            os.utime(filepath, None)
+        except Exception as e:
+            stdscr.addstr(prompt_y, 0, f"Error creating file: {str(e)[:max_x-20]}", curses.A_BOLD)
+            stdscr.clrtoeol()
+            stdscr.refresh()
+            stdscr.getch()
+            return
+
     def create_new_directory(self):
         stdscr = self.renderer.stdscr
         if not stdscr:
@@ -304,7 +393,7 @@ class FileNavigator:
         selected_name, selected_is_dir = items[self.browser_selected]
         selected_path = os.path.join(self.dir_manager.current_path, selected_name)
 
-        prompt = "Rename to: "
+        prompt = "Rename: "
         prompt_y = max_y - 1
 
         stdscr.move(prompt_y, 0)
