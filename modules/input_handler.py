@@ -155,7 +155,7 @@ class InputHandler:
                 curses.flash()
             return False
 
-        # === yy / dd / nd operators ===
+        # === yy / dd / nd / rn operators ===
         if self.pending_operator == 'd' and key == ord('d') and total > 0:
             try:
                 self.nav.clipboard.yank(selected_path, selected_name, selected_is_dir, cut=True)
@@ -177,6 +177,11 @@ class InputHandler:
             self.pending_operator = None
             return False
 
+        if self.pending_operator == 'r' and key == ord('n') and total > 0:
+            self.nav.rename_selected()
+            self.pending_operator = None
+            return False
+
         if key == ord('d'):
             self.pending_operator = 'd'
             self.operator_timestamp = time.time()
@@ -189,6 +194,11 @@ class InputHandler:
 
         if key == ord('n'):
             self.pending_operator = 'n'
+            self.operator_timestamp = time.time()
+            return False
+
+        if key == ord('r'):
+            self.pending_operator = 'r'
             self.operator_timestamp = time.time()
             return False
 
