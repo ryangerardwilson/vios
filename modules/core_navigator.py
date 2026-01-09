@@ -66,11 +66,17 @@ class FileNavigator:
             return
 
         mime_type, _ = mimetypes.guess_type(filepath)
+        _, ext = os.path.splitext(filepath)
 
         curses.endwin()
 
         try:
-            if mime_type == 'application/pdf':
+            if ext in ('.csv', '.parquet'):
+                subprocess.call([
+                    "vixl",
+                    filepath
+                ])
+            elif mime_type == 'application/pdf':
                 subprocess.Popen([
                     "zathura", filepath
                 ],
