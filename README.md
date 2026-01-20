@@ -28,6 +28,7 @@ Operating System" focused purely on efficient file management.
   - `yy` — Yank marked items (or the current row) into the clipboard
   - `dd` — Cut marked items (or the current row) into the clipboard
   - `Backspace` / `Delete` — Immediate cut (delete without yank)
+  - `D` — Delete all currently marked items immediately
   - `p` — Paste the clipboard batch into the current directory
   - `Ctrl+L` — Clear clipboard
 - **File Creation**:
@@ -100,5 +101,4 @@ modal file browser without leaving the terminal.
 ## 5. License
 
 MIT License. 
-
 

@@ -140,7 +140,7 @@ class InputHandler:
             if key == ord('x'):
                 self._cut_marked()
                 return False
-            if key == ord('d'):
+            if key == ord('D'):
                 self._delete_marked()
                 return False
 

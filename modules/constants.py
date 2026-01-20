@@ -22,7 +22,8 @@ Filtering (glob-style)
 
 Clipboard & Multi Operations
   y               Start yank (copy) — yy stores marked items (or current) in clipboard
-  d               Delete marked items OR start cut — dd stores marked/current items
+  d               Start cut operator (dd clips marked/current items)
+  D               Delete marked items immediately
   m               Toggle mark on current item (✓) — auto-advance
   p               Copy marked items here (overwrite) OR paste saved clipboard batch
   x               Cut/move marked items here (overwrite)
