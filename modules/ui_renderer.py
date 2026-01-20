@@ -99,13 +99,16 @@ class UIRenderer:
 
                 arrow = ">" if global_idx == self.nav.browser_selected else " "
                 current_full_path = os.path.join(self.nav.dir_manager.current_path, name)
-                mark  = "✓" if current_full_path in self.nav.marked_items else " "
-                prefix = f"{arrow}{mark}"
+                mark  = "✓" if current_full_path in self.nav.marked_items else ""
+                if mark:
+                    prefix = f"{arrow}{mark} "
+                else:
+                    prefix = f"{arrow} "
 
                 color = (curses.color_pair(1) | curses.A_BOLD
                          if global_idx == self.nav.browser_selected else curses.color_pair(2))
                 suffix = '/' if is_dir else ''
-                line = f"{prefix} {name}{suffix}"
+                line = f"{prefix}{name}{suffix}"
 
                 y = list_start_y + i
                 try:
