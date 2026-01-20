@@ -15,7 +15,7 @@ class InputHandler:
 
         self.pending_comma = False
         self.comma_timestamp = 0.0
-        self.comma_timeout = 0.5
+        self.comma_timeout = 2.0
         self.comma_sequence = ""
 
     def _check_operator_timeout(self):
@@ -143,6 +143,18 @@ class InputHandler:
             selected_name, selected_is_dir = items[self.nav.browser_selected]
             selected_path = os.path.join(self.nav.dir_manager.current_path, selected_name)
 
+        if key == ord(','):
+            self.pending_comma = True
+            self.comma_sequence = ""
+            self.comma_timestamp = time.time()
+            self.nav.leader_sequence = ","
+            self.nav.need_redraw = True
+            return False
+
+        if self.pending_comma:
+            if self._handle_comma_command(key, total):
+                return False
+
         # === Toggle mark with 'm' — now using full path ===
         if key == ord('m'):
             if total > 0:
@@ -168,18 +180,6 @@ class InputHandler:
         if key == ord('?'):
             self.nav.show_help = True
             return False
-
-        if key == ord(','):
-            self.pending_comma = True
-            self.comma_sequence = ""
-            self.comma_timestamp = time.time()
-            self.nav.leader_sequence = ","
-            self.nav.need_redraw = True
-            return False
-
-        if self.pending_comma:
-            if self._handle_comma_command(key, total):
-                return False
 
         if key == ord('.'):
             self.nav.dir_manager.toggle_hidden()
