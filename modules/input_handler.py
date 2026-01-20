@@ -190,12 +190,14 @@ class InputHandler:
         total = len(display_items)
         selection = None
         selected_name = selected_path = selected_is_dir = None
+        target_dir = self.nav.dir_manager.current_path
         if total == 0:
             self.nav.browser_selected = 0
         else:
             self.nav.browser_selected = max(0, min(self.nav.browser_selected, total - 1))
             selection = display_items[self.nav.browser_selected]
             selected_name, selected_is_dir, selected_path, _ = selection
+            target_dir = self._determine_target_directory(selected_path, selected_is_dir)
 
         if key == ord(','):
             self.pending_comma = True
@@ -272,7 +274,7 @@ class InputHandler:
         # === Multi-mark operations ===
         if self.nav.marked_items:
             if key == ord('p'):
-                self._copy_marked()
+                self._copy_marked(target_dir)
                 return False
             if key == ord('x'):
                 self._delete_marked()
@@ -281,7 +283,7 @@ class InputHandler:
         # === Single-item paste (only when no marks) ===
         if key == ord('p') and self.nav.clipboard.has_entries:
             try:
-                self.nav.clipboard.paste(self.nav.dir_manager.current_path)
+                self.nav.clipboard.paste(target_dir)
                 count = self.nav.clipboard.entry_count
                 noun = "item" if count == 1 else "items"
                 self.nav.status_message = f"Pasted {count} {noun}"
@@ -372,8 +374,8 @@ class InputHandler:
         return False
 
     # === Updated multi-mark operations using full paths ===
-    def _copy_marked(self):
-        self._move_or_copy_marked(copy_only=True)
+    def _copy_marked(self, dest_dir):
+        self._move_or_copy_marked(dest_dir, copy_only=True)
 
     def _delete_marked(self):
         if not self.nav.marked_items:
@@ -398,12 +400,13 @@ class InputHandler:
 
         self.nav.need_redraw = True
 
-    def _move_or_copy_marked(self, copy_only: bool):
+    def _move_or_copy_marked(self, dest_dir, copy_only: bool):
         if not self.nav.marked_items:
             curses.flash()
             return
 
-        dest_dir = self.nav.dir_manager.current_path
+        if not dest_dir or not os.path.isdir(dest_dir):
+            dest_dir = self.nav.dir_manager.current_path
         success = True
 
         for full_path in list(self.nav.marked_items):
@@ -468,6 +471,15 @@ class InputHandler:
         except Exception:
             curses.flash()
             return False
+
+    def _determine_target_directory(self, selected_path, selected_is_dir):
+        if selected_path:
+            if selected_is_dir:
+                return selected_path
+            parent = os.path.dirname(selected_path)
+            if parent:
+                return parent
+        return self.nav.dir_manager.current_path
 
     def _get_unique_name(self, dest_dir: str, base_name: str) -> str:
         dest_path = os.path.join(dest_dir, base_name)

@@ -28,7 +28,7 @@ Clipboard & Multi Operations
   dd              Cut marked items (or current row) into clipboard
   x               Delete marked items or current entry immediately (bypass clipboard)
   m               Toggle mark on current item (✓) — auto-advance
-  p               Copy marked items here (overwrite) OR paste saved clipboard batch
+  p               Paste clipboard into selected directory (or alongside selected file)
 
 Other
   v               Create new file and open in Vim

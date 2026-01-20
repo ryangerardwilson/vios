@@ -40,7 +40,7 @@ Operating System" focused purely on efficient file management.
   - `dd` — Cut marked items (or the current row) into the clipboard
   - `Backspace` / `Delete` — Immediate cut (delete without yank)
   - `x` — Delete all marked items or the current selection immediately (bypasses clipboard)
-  - `p` — Paste the clipboard batch into the current directory
+  - `p` — Paste the clipboard into the selected directory (or next to the selected file)
 - **File Creation**:
   - `v` — Create new empty file (prompts for filename at bottom)
 - **File Opening**:
@@ -92,7 +92,7 @@ modal file browser without leaving the terminal.
 - yy: Copy.
 - dd: Cut.
 - Backspace: Delete.
-- p: Paste (rename if needed).
+- p: Paste into the selected directory (or alongside the selected file).
 
 ### 3.3. Command Mode (i):
 
