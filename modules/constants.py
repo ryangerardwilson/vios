@@ -10,6 +10,8 @@ Navigation
   k               Up
   Ctrl+J          Jump down (≈10% of list)
   Ctrl+K          Jump up (≈10% of list)
+  Ctrl+H          Go to previous directory in history
+  Ctrl+L          Go to next directory in history
   ,k              Jump to top
   ,j              Jump to bottom
   e               Expand/collapse selected directory inline
@@ -34,7 +36,7 @@ Clipboard & Multi Operations
   x               Delete marked items or current entry immediately (bypass clipboard)
   m               Toggle mark on current item (✓) — auto-advance
   p               Copy marked items here (overwrite) OR paste saved clipboard batch
-  Ctrl+L          Clear clipboard
+  ,cl             Clear clipboard
 
 Other
   v               Create new file and open in Vim

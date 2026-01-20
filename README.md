@@ -19,6 +19,7 @@ Operating System" focused purely on efficient file management.
   - `Ctrl+J` / `Ctrl+K` — Jump roughly 10% down/up the list
   - `,k` / `,j` — Jump to top/bottom instantly
   - `e` — Expand/collapse the selected directory inline
+  - `Ctrl+H` / `Ctrl+L` — Go backward/forward through directory history
 - **Powerful Filtering** (glob-style):
   - `/` — Enter filter mode
     - Type pattern (e.g., `rat`, `*.py`, `*test*`)
@@ -33,7 +34,7 @@ Operating System" focused purely on efficient file management.
   - `Backspace` / `Delete` — Immediate cut (delete without yank)
   - `x` — Delete all marked items or the current selection immediately (bypasses clipboard)
   - `p` — Paste the clipboard batch into the current directory
-  - `Ctrl+L` — Clear clipboard
+  - `,cl` — Clear clipboard
 - **Sorting Controls**:
   - `,sa` — Sort alphabetically (default)
   - `,sma` — Sort by modified date ascending (oldest first)
@@ -83,6 +84,7 @@ modal file browser without leaving the terminal.
 - Ctrl+J / Ctrl+K: Jump down/up quickly.
 - ,j / ,k: Jump to bottom/top.
 - e: Expand/collapse selected directory inline.
+- Ctrl+H / Ctrl+L: Jump backward/forward through directory history.
 
 ### 3.2. File Operations:
 
@@ -90,6 +92,7 @@ modal file browser without leaving the terminal.
 - dd: Cut.
 - Backspace: Delete.
 - p: Paste (rename if needed).
+- ,cl: Clear clipboard.
 
 ### 3.3. Command Mode (i):
 
@@ -118,3 +121,7 @@ modal file browser without leaving the terminal.
 ## 5. License
 
 MIT License. 
+- History Navigation:
+
+- Ctrl+H: Go to the previously visited directory.
+- Ctrl+L: Go to the next directory in history.

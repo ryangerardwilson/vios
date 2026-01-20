@@ -35,6 +35,9 @@ class FileNavigator:
         self.cheatsheet = Constants.CHEATSHEET
         self.status_message = ""
         self.leader_sequence = ""
+        start_real = os.path.realpath(start_path)
+        self.history: List[str] = [start_real]
+        self.history_index = 0
 
     def open_file(self, filepath: str):
         import mimetypes
@@ -603,3 +606,39 @@ class FileNavigator:
         to_remove = [p for p in self.expanded_nodes if p == base_path or p.startswith(f"{base_path}{os.sep}")]
         for entry in to_remove:
             self.expanded_nodes.discard(entry)
+
+    def change_directory(self, new_path: str, *, record_history: bool = True):
+        new_real = os.path.realpath(new_path)
+        if not os.path.isdir(new_real):
+            return False
+
+        if record_history:
+            if self.history_index < len(self.history) - 1:
+                self.history = self.history[:self.history_index + 1]
+            if not self.history or self.history[-1] != new_real:
+                self.history.append(new_real)
+                self.history_index = len(self.history) - 1
+            else:
+                self.history_index = len(self.history) - 1
+        self._set_current_path(new_real)
+        return True
+
+    def go_history_back(self):
+        if self.history_index <= 0:
+            return False
+        self.history_index -= 1
+        self._set_current_path(self.history[self.history_index])
+        return True
+
+    def go_history_forward(self):
+        if self.history_index >= len(self.history) - 1:
+            return False
+        self.history_index += 1
+        self._set_current_path(self.history[self.history_index])
+        return True
+
+    def _set_current_path(self, new_path: str):
+        self.dir_manager.current_path = new_path
+        self.browser_selected = 0
+        self.list_offset = 0
+        self.need_redraw = True

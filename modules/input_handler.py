@@ -26,6 +26,11 @@ class InputHandler:
         if self.pending_comma and (time.time() - self.comma_timestamp > self.comma_timeout):
             self._reset_comma()
 
+    def _clear_clipboard(self):
+        self.nav.clipboard.cleanup()
+        self.nav.status_message = "Clipboard cleared"
+        self.nav.need_redraw = True
+
     def _handle_comma_command(self, key, total: int) -> bool:
         ch = self._key_to_char(key)
         if ch is None:
@@ -43,6 +48,7 @@ class InputHandler:
             "sa": lambda: self._set_sort_mode("alpha", "Sort: Name"),
             "sma": lambda: self._set_sort_mode("mtime_asc", "Sort: Modified ↑"),
             "smd": lambda: self._set_sort_mode("mtime_desc", "Sort: Modified ↓"),
+            "cl": self._clear_clipboard,
         }
 
         if command in command_map:
@@ -188,6 +194,24 @@ class InputHandler:
             if self._handle_comma_command(key, total):
                 return False
 
+        if key == 8:  # Ctrl+H
+            if self.nav.go_history_back():
+                self.in_filter_mode = False
+                self.nav.dir_manager.filter_pattern = ""
+                self.nav.status_message = "History back"
+            else:
+                curses.flash()
+            return False
+
+        if key == 12:  # Ctrl+L
+            if self.nav.go_history_forward():
+                self.in_filter_mode = False
+                self.nav.dir_manager.filter_pattern = ""
+                self.nav.status_message = "History forward"
+            else:
+                curses.flash()
+            return False
+
         # === Toggle mark with 'm' — now using full path ===
         if key == ord('m'):
             if total > 0:
@@ -206,10 +230,6 @@ class InputHandler:
             return False
 
         # === Other single-key commands ===
-        if key == 12:  # Ctrl+L
-            self.nav.clipboard.cleanup()
-            return False
-
         if key == ord('?'):
             self.nav.show_help = True
             self.nav.help_scroll = 0
@@ -358,16 +378,14 @@ class InputHandler:
         elif key in (curses.KEY_LEFT, ord('h')):
             parent = os.path.dirname(self.nav.dir_manager.current_path)
             if parent != self.nav.dir_manager.current_path:
-                self.nav.dir_manager.current_path = parent
-                self.nav.browser_selected = 0
-                self.in_filter_mode = False
-                self.nav.dir_manager.filter_pattern = ""
+                if self.nav.change_directory(parent):
+                    self.in_filter_mode = False
+                    self.nav.dir_manager.filter_pattern = ""
         elif key in (curses.KEY_RIGHT, ord('l'), 10, 13) and total > 0:
             if selected_is_dir:
-                self.nav.dir_manager.current_path = selected_path
-                self.nav.browser_selected = 0
-                self.in_filter_mode = False
-                self.nav.dir_manager.filter_pattern = ""
+                if self.nav.change_directory(selected_path):
+                    self.in_filter_mode = False
+                    self.nav.dir_manager.filter_pattern = ""
             else:
                 self.nav.open_file(selected_path)
 
