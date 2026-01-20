@@ -31,7 +31,16 @@ class InputHandler:
         self.nav.status_message = "Clipboard cleared"
         self.nav.need_redraw = True
 
-    def _handle_comma_command(self, key, total: int) -> bool:
+    def _leader_rename(self, selection):
+        if not selection:
+            curses.flash()
+            return
+        self.nav.rename_selected()
+
+    def _leader_copy_path(self):
+        self.nav.copy_current_path()
+
+    def _handle_comma_command(self, key, total: int, selection) -> bool:
         ch = self._key_to_char(key)
         if ch is None:
             self._reset_comma()
@@ -49,6 +58,10 @@ class InputHandler:
             "sma": lambda: self._set_sort_mode("mtime_asc", "Sort: Modified ↑"),
             "smd": lambda: self._set_sort_mode("mtime_desc", "Sort: Modified ↓"),
             "cl": self._clear_clipboard,
+            "nf": self.nav.create_new_file_no_open,
+            "nd": self.nav.create_new_directory,
+            "rn": lambda: self._leader_rename(selection),
+            "cp": self._leader_copy_path,
         }
 
         if command in command_map:
@@ -175,12 +188,14 @@ class InputHandler:
 
         display_items = self.nav.build_display_items()
         total = len(display_items)
+        selection = None
+        selected_name = selected_path = selected_is_dir = None
         if total == 0:
             self.nav.browser_selected = 0
-            selected_name = selected_path = selected_is_dir = None
         else:
             self.nav.browser_selected = max(0, min(self.nav.browser_selected, total - 1))
-            selected_name, selected_is_dir, selected_path, _ = display_items[self.nav.browser_selected]
+            selection = display_items[self.nav.browser_selected]
+            selected_name, selected_is_dir, selected_path, _ = selection
 
         if key == ord(','):
             self.pending_comma = True
@@ -191,7 +206,7 @@ class InputHandler:
             return False
 
         if self.pending_comma:
-            if self._handle_comma_command(key, total):
+            if self._handle_comma_command(key, total, selection):
                 return False
 
         if key == 8:  # Ctrl+H
@@ -287,7 +302,7 @@ class InputHandler:
                 self.nav.need_redraw = True
             return False
 
-        # === yy / dd / nd / nf / rn operators ===
+        # === yy / dd operators ===
         if self.pending_operator == 'd' and key == ord('d'):
             handled = False
             if self.nav.marked_items:
@@ -316,26 +331,6 @@ class InputHandler:
             if handled:
                 return False
 
-        if self.pending_operator == 'n' and key == ord('d'):
-            self.nav.create_new_directory()
-            self.pending_operator = None
-            return False
-
-        if self.pending_operator == 'n' and key == ord('f'):
-            self.nav.create_new_file_no_open()
-            self.pending_operator = None
-            return False
-
-        if self.pending_operator == 'r' and key == ord('n') and total > 0:
-            self.nav.rename_selected()
-            self.pending_operator = None
-            return False
-
-        if self.pending_operator == 'c' and key == ord('p'):
-            self.nav.copy_current_path()
-            self.pending_operator = None
-            return False
-
         if key == ord('d'):
             self.pending_operator = 'd'
             self.operator_timestamp = time.time()
@@ -343,21 +338,6 @@ class InputHandler:
 
         if key == ord('y'):
             self.pending_operator = 'y'
-            self.operator_timestamp = time.time()
-            return False
-
-        if key == ord('n'):
-            self.pending_operator = 'n'
-            self.operator_timestamp = time.time()
-            return False
-
-        if key == ord('r'):
-            self.pending_operator = 'r'
-            self.operator_timestamp = time.time()
-            return False
-
-        if key == ord('c'):
-            self.pending_operator = 'c'
             self.operator_timestamp = time.time()
             return False
 

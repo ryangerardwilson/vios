@@ -17,9 +17,16 @@ Operating System" focused purely on efficient file management.
   - `l` / `Enter` — Enter directory or open file
   - `j` / `k` — Move down/up in selection
   - `Ctrl+J` / `Ctrl+K` — Jump roughly 10% down/up the list
-  - `,k` / `,j` — Jump to top/bottom instantly
   - `e` — Expand/collapse the selected directory inline
   - `Ctrl+H` / `Ctrl+L` — Go backward/forward through directory history
+- **Leader Commands (press `,` first)**:
+  - `,j` / `,k` — Jump to bottom/top instantly
+  - `,sa` / `,sma` / `,smd` — Sorting shortcuts
+  - `,nf` — Create new file (no open)
+  - `,nd` — Create new directory
+  - `,rn` — Rename selected item
+  - `,cp` — Copy `cd` command for current path to system clipboard
+  - `,cl` — Clear clipboard contents
 - **Powerful Filtering** (glob-style):
   - `/` — Enter filter mode
     - Type pattern (e.g., `rat`, `*.py`, `*test*`)
@@ -34,11 +41,6 @@ Operating System" focused purely on efficient file management.
   - `Backspace` / `Delete` — Immediate cut (delete without yank)
   - `x` — Delete all marked items or the current selection immediately (bypasses clipboard)
   - `p` — Paste the clipboard batch into the current directory
-  - `,cl` — Clear clipboard
-- **Sorting Controls**:
-  - `,sa` — Sort alphabetically (default)
-  - `,sma` — Sort by modified date ascending (oldest first)
-  - `,smd` — Sort by modified date descending (newest first)
 - **File Creation**:
   - `v` — Create new empty file (prompts for filename at bottom)
 - **File Opening**:
@@ -82,7 +84,6 @@ modal file browser without leaving the terminal.
 - l/Enter: Enter dir or open file in Vim.
 - /: Search (type to filter, Enter to open).
 - Ctrl+J / Ctrl+K: Jump down/up quickly.
-- ,j / ,k: Jump to bottom/top.
 - e: Expand/collapse selected directory inline.
 - Ctrl+H / Ctrl+L: Jump backward/forward through directory history.
 
@@ -92,7 +93,6 @@ modal file browser without leaving the terminal.
 - dd: Cut.
 - Backspace: Delete.
 - p: Paste (rename if needed).
-- ,cl: Clear clipboard.
 
 ### 3.3. Command Mode (i):
 
@@ -106,11 +106,15 @@ modal file browser without leaving the terminal.
 - t: Launches Alacritty in current dir.
 - Quit: Esc.
 
-### 3.5 Sorting:
+### 3.5 Leader Commands (press `,` first):
 
-- ,sa: Sort alphabetically.
-- ,sma: Sort by modified date ascending.
-- ,smd: Sort by modified date descending.
+- ,j / ,k: Jump to bottom/top instantly.
+- ,sa / ,sma / ,smd: Sort alphabetically, by modified date ascending, or descending.
+- ,nf: Create new file (no open).
+- ,nd: Create new directory.
+- ,rn: Rename the currently selected item.
+- ,cp: Copy a `cd` command for the current directory to the system clipboard.
+- ,cl: Clear the multi-item clipboard buffer.
 
 ## 4. Requirements
 
@@ -120,8 +124,4 @@ modal file browser without leaving the terminal.
 
 ## 5. License
 
-MIT License. 
-- History Navigation:
-
-- Ctrl+H: Go to the previously visited directory.
-- Ctrl+L: Go to the next directory in history.
+MIT License.
