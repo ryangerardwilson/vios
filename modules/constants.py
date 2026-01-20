@@ -21,10 +21,10 @@ Filtering (glob-style)
   Ctrl+R          Clear filter and show all items
 
 Clipboard & Multi Operations
-  y               Start yank (copy) — yy to confirm
-  d               Delete marked items OR start cut/delete — dd to confirm
+  y               Start yank (copy) — yy stores marked items (or current) in clipboard
+  d               Delete marked items OR start cut — dd stores marked/current items
   m               Toggle mark on current item (✓) — auto-advance
-  p               Copy marked items here (overwrite) OR paste single clipboard
+  p               Copy marked items here (overwrite) OR paste saved clipboard batch
   x               Cut/move marked items here (overwrite)
   Ctrl+L          Clear clipboard
 

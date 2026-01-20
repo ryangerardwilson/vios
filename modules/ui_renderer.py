@@ -1,5 +1,6 @@
 # ~/Apps/vios/modules/ui_renderer.py
 import curses
+from typing import Any, Optional, Tuple, cast
 from .directory_manager import DirectoryManager
 import os
 
@@ -7,13 +8,13 @@ import os
 class UIRenderer:
     def __init__(self, navigator):
         self.nav = navigator
-        self.stdscr = None
+        self.stdscr: Optional[Any] = None
 
     def render(self):
-        if not self.stdscr:
-            return
         stdscr = self.stdscr
-        max_y, max_x = stdscr.getmaxyx()
+        if stdscr is None:
+            return
+        max_y, max_x = cast(Tuple[int, int], stdscr.getmaxyx())
 
         try:
             stdscr.erase()
@@ -100,10 +101,9 @@ class UIRenderer:
 
         # Status bar
         yank_text = ""
-        if self.nav.clipboard.yanked_temp_path:
-            yank_text = f"  YANK: {self.nav.clipboard.yanked_original_name}"
-            if self.nav.clipboard.yanked_is_dir:
-                yank_text += "/"
+        clip_status = self.nav.clipboard.get_status_text()
+        if clip_status:
+            yank_text = f"  CLIP: {clip_status}"
 
         filter_text = ""
         if self.nav.dir_manager.filter_pattern:

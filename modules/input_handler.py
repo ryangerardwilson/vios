@@ -145,29 +145,44 @@ class InputHandler:
                 return False
 
         # === Single-item paste (only when no marks) ===
-        if key == ord('p') and self.nav.clipboard.yanked_temp_path:
+        if key == ord('p') and self.nav.clipboard.has_entries:
             try:
                 self.nav.clipboard.paste(self.nav.dir_manager.current_path)
+                count = self.nav.clipboard.entry_count
+                noun = "item" if count == 1 else "items"
+                self.nav.status_message = f"Pasted {count} {noun}"
             except Exception:
                 curses.flash()
             return False
 
         # === yy / dd / nd / nf / rn operators ===
-        if self.pending_operator == 'd' and key == ord('d') and total > 0:
-            try:
-                self.nav.clipboard.yank(selected_path, selected_name, selected_is_dir, cut=True)
-            except Exception:
-                curses.flash()
+        if self.pending_operator == 'd' and key == ord('d'):
+            handled = False
+            if self.nav.marked_items:
+                handled = self._stage_marked_to_clipboard(cut=True)
+            elif total > 0:
+                try:
+                    self.nav.clipboard.yank(selected_path, selected_name, selected_is_dir, cut=True)
+                    handled = True
+                except Exception:
+                    curses.flash()
             self.pending_operator = None
-            return False
+            if handled:
+                return False
 
-        if self.pending_operator == 'y' and key == ord('y') and total > 0:
-            try:
-                self.nav.clipboard.yank(selected_path, selected_name, selected_is_dir, cut=False)
-            except Exception:
-                curses.flash()
+        if self.pending_operator == 'y' and key == ord('y'):
+            handled = False
+            if self.nav.marked_items:
+                handled = self._stage_marked_to_clipboard(cut=False)
+            elif total > 0:
+                try:
+                    self.nav.clipboard.yank(selected_path, selected_name, selected_is_dir, cut=False)
+                    handled = True
+                except Exception:
+                    curses.flash()
             self.pending_operator = None
-            return False
+            if handled:
+                return False
 
         if self.pending_operator == 'n' and key == ord('d'):
             self.nav.create_new_directory()
@@ -311,6 +326,35 @@ class InputHandler:
             curses.flash()
 
         self.nav.need_redraw = True
+
+    def _stage_marked_to_clipboard(self, cut: bool) -> bool:
+        if not self.nav.marked_items:
+            return False
+
+        entries = []
+        for full_path in sorted(self.nav.marked_items):
+            if not os.path.exists(full_path):
+                continue
+            name = os.path.basename(full_path)
+            is_dir = os.path.isdir(full_path)
+            entries.append((full_path, name, is_dir))
+
+        if not entries:
+            curses.flash()
+            self.nav.marked_items.clear()
+            return False
+
+        try:
+            self.nav.clipboard.yank_multiple(entries, cut=cut)
+            self.nav.marked_items.clear()
+            count = len(entries)
+            action = "Cut" if cut else "Yanked"
+            noun = "item" if count == 1 else "items"
+            self.nav.status_message = f"{action} {count} {noun} to clipboard"
+            return True
+        except Exception:
+            curses.flash()
+            return False
 
     def _get_unique_name(self, dest_dir: str, base_name: str) -> str:
         dest_path = os.path.join(dest_dir, base_name)

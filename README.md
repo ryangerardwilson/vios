@@ -24,10 +24,11 @@ Operating System" focused purely on efficient file management.
     - Press `/` again or `Esc` to cancel/clear
   - `Ctrl+R` — Clear filter instantly
 - **Clipboard Operations**:
-  - `yy` — Yank (copy) selected file/dir
-  - `dd` — Cut (move/delete original after paste)
+  - `m` — Toggle mark to build a multi-select batch
+  - `yy` — Yank marked items (or the current row) into the clipboard
+  - `dd` — Cut marked items (or the current row) into the clipboard
   - `Backspace` / `Delete` — Immediate cut (delete without yank)
-  - `p` — Paste yanked item (auto-renames on conflict, e.g., `file (1).txt`)
+  - `p` — Paste the clipboard batch into the current directory
   - `Ctrl+L` — Clear clipboard
 - **File Creation**:
   - `v` — Create new empty file (prompts for filename at bottom)
@@ -99,6 +100,5 @@ modal file browser without leaving the terminal.
 ## 5. License
 
 MIT License. 
-
 
 
