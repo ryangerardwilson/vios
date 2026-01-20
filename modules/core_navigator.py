@@ -596,3 +596,10 @@ class FileNavigator:
             collection.append((child_name, child_is_dir, child_path, depth))
             if child_is_dir and child_path in self.expanded_nodes:
                 self._append_expanded(child_path, depth + 1, collection)
+
+    def collapse_branch(self, base_path: str):
+        if base_path not in self.expanded_nodes and not any(p.startswith(f"{base_path}{os.sep}") for p in self.expanded_nodes):
+            return
+        to_remove = [p for p in self.expanded_nodes if p == base_path or p.startswith(f"{base_path}{os.sep}")]
+        for entry in to_remove:
+            self.expanded_nodes.discard(entry)

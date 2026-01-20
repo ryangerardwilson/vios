@@ -226,7 +226,7 @@ class InputHandler:
 
         if key == ord('e') and total > 0 and selected_is_dir and selected_path:
             if selected_path in self.nav.expanded_nodes:
-                self.nav.expanded_nodes.remove(selected_path)
+                self.nav.collapse_branch(selected_path)
                 self.nav.status_message = f"Collapsed {selected_name}"
             else:
                 self.nav.expanded_nodes.add(selected_path)
