@@ -51,7 +51,14 @@ class UIRenderer:
         except curses.error:
             pass
 
-        list_start_y = 1
+        if max_y > 1:
+            try:
+                stdscr.move(1, 0)
+                stdscr.clrtoeol()
+            except curses.error:
+                pass
+
+        list_start_y = 2
         available_height = max_y - list_start_y - 1
         if available_height < 0:
             available_height = 0
@@ -90,15 +97,15 @@ class UIRenderer:
             for i, (name, is_dir) in enumerate(visible_items):
                 global_idx = self.nav.list_offset + i
 
-                arrow = "> " if global_idx == self.nav.browser_selected else "  "
+                arrow = ">" if global_idx == self.nav.browser_selected else " "
                 current_full_path = os.path.join(self.nav.dir_manager.current_path, name)
-                mark  = "✓ " if current_full_path in self.nav.marked_items else "  "
-                prefix = arrow + mark
+                mark  = "✓" if current_full_path in self.nav.marked_items else " "
+                prefix = f"{arrow}{mark}"
 
                 color = (curses.color_pair(1) | curses.A_BOLD
                          if global_idx == self.nav.browser_selected else curses.color_pair(2))
                 suffix = '/' if is_dir else ''
-                line = f"{prefix}{name}{suffix}"
+                line = f"{prefix} {name}{suffix}"
 
                 y = list_start_y + i
                 try:
