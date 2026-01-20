@@ -362,14 +362,12 @@ class InputHandler:
                 self.nav.browser_selected = 0
                 self.in_filter_mode = False
                 self.nav.dir_manager.filter_pattern = ""
-                self.nav.expanded_nodes.clear()
         elif key in (curses.KEY_RIGHT, ord('l'), 10, 13) and total > 0:
             if selected_is_dir:
                 self.nav.dir_manager.current_path = selected_path
                 self.nav.browser_selected = 0
                 self.in_filter_mode = False
                 self.nav.dir_manager.filter_pattern = ""
-                self.nav.expanded_nodes.clear()
             else:
                 self.nav.open_file(selected_path)
 
