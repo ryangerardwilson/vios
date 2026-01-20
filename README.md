@@ -28,7 +28,7 @@ Operating System" focused purely on efficient file management.
   - `yy` — Yank marked items (or the current row) into the clipboard
   - `dd` — Cut marked items (or the current row) into the clipboard
   - `Backspace` / `Delete` — Immediate cut (delete without yank)
-  - `D` — Delete all currently marked items immediately
+  - `x` — Delete all marked items or the current selection immediately (bypasses clipboard)
   - `p` — Paste the clipboard batch into the current directory
   - `Ctrl+L` — Clear clipboard
 - **File Creation**:
@@ -36,6 +36,7 @@ Operating System" focused purely on efficient file management.
 - **File Opening**:
   - Text files (`.py`, `.txt`, `.md`, etc.) → opened in **Vim**
   - PDF files → opened in **Zathura** (if available)
+  - Image files → opened externally via **swayimg**
 - **Terminal Integration**:
   - `t` — Open terminal (Alacritty preferred, falls back to default) in current 
     directory
@@ -101,4 +102,3 @@ modal file browser without leaving the terminal.
 ## 5. License
 
 MIT License. 
-

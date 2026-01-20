@@ -138,9 +138,6 @@ class InputHandler:
                 self._copy_marked()
                 return False
             if key == ord('x'):
-                self._cut_marked()
-                return False
-            if key == ord('D'):
                 self._delete_marked()
                 return False
 
@@ -153,6 +150,19 @@ class InputHandler:
                 self.nav.status_message = f"Pasted {count} {noun}"
             except Exception:
                 curses.flash()
+            return False
+
+        if key == ord('x') and total > 0 and selected_path:
+            try:
+                if selected_is_dir:
+                    shutil.rmtree(selected_path)
+                else:
+                    os.remove(selected_path)
+                self.nav.status_message = f"Deleted {selected_name}"
+            except Exception:
+                curses.flash()
+            finally:
+                self.nav.need_redraw = True
             return False
 
         # === yy / dd / nd / nf / rn operators ===
@@ -258,9 +268,6 @@ class InputHandler:
     # === Updated multi-mark operations using full paths ===
     def _copy_marked(self):
         self._move_or_copy_marked(copy_only=True)
-
-    def _cut_marked(self):
-        self._move_or_copy_marked(copy_only=False)
 
     def _delete_marked(self):
         if not self.nav.marked_items:

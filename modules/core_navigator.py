@@ -3,6 +3,7 @@ import curses
 import subprocess
 import os
 import sys
+from typing import Any, cast
 
 from .directory_manager import DirectoryManager
 from .clipboard_manager import ClipboardManager
@@ -35,7 +36,12 @@ class FileNavigator:
         import zipfile
 
         if filepath.endswith('.zip'):
-            stdscr = self.renderer.stdscr
+            stdscr_opt = self.renderer.stdscr
+            if stdscr_opt is None:
+                curses.flash()
+                self.need_redraw = True
+                return
+            stdscr = cast(Any, stdscr_opt)
             max_y, max_x = stdscr.getmaxyx()
             try:
                 filename = os.path.basename(filepath)
@@ -85,6 +91,15 @@ class FileNavigator:
                 stdin=subprocess.DEVNULL,
                 preexec_fn=os.setsid
                 )
+            elif mime_type and mime_type.startswith('image/'):
+                subprocess.Popen([
+                    "swayimg", filepath
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                stdin=subprocess.DEVNULL,
+                preexec_fn=os.setsid
+                )
             else:
                 subprocess.call([
                     "vim",
@@ -108,8 +123,10 @@ class FileNavigator:
                 stderr=subprocess.DEVNULL,
                 preexec_fn=os.setsid
             )
-            p.stdin.write(text_to_copy.encode())
-            p.stdin.close()
+            stdin_pipe = p.stdin
+            if stdin_pipe:
+                stdin_pipe.write(text_to_copy.encode())
+                stdin_pipe.close()
             p.wait()  # Wait for the parent process to exit (quick, mimics subprocess.run behavior)
             self.status_message = "cd command copied to clipboard!"
         except Exception:

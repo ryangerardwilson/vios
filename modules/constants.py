@@ -23,10 +23,9 @@ Filtering (glob-style)
 Clipboard & Multi Operations
   y               Start yank (copy) — yy stores marked items (or current) in clipboard
   d               Start cut operator (dd clips marked/current items)
-  D               Delete marked items immediately
+  x               Delete marked items or current entry immediately (bypass clipboard)
   m               Toggle mark on current item (✓) — auto-advance
   p               Copy marked items here (overwrite) OR paste saved clipboard batch
-  x               Cut/move marked items here (overwrite)
   Ctrl+L          Clear clipboard
 
 File Opening
