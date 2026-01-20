@@ -3,7 +3,9 @@ import curses
 import subprocess
 import os
 import sys
-from typing import Any, cast
+import shutil
+import shlex
+from typing import Any, cast, List
 
 from .directory_manager import DirectoryManager
 from .clipboard_manager import ClipboardManager
@@ -204,6 +206,43 @@ class FileNavigator:
         finally:
             stdscr.timeout(40)  # Restore run()'s timeout
             self.need_redraw = True
+
+    def open_terminal(self):
+        cwd = self.dir_manager.current_path
+        commands: List[list[str]] = []
+        term_env = os.environ.get("TERMINAL")
+        if term_env:
+            commands.append(shlex.split(term_env))
+        commands.extend([[cmd] for cmd in (
+            "alacritty",
+            "foot",
+            "kitty",
+            "wezterm",
+            "gnome-terminal",
+            "xterm"
+        )])
+
+        for cmd in commands:
+            if not cmd:
+                continue
+            if shutil.which(cmd[0]) is None:
+                continue
+            try:
+                subprocess.Popen(
+                    cmd,
+                    cwd=cwd,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    stdin=subprocess.DEVNULL,
+                    preexec_fn=os.setsid
+                )
+                self.status_message = f"Opened terminal: {cmd[0]}"
+                return
+            except Exception:
+                continue
+
+        self.status_message = "No terminal found"
+        curses.flash()
 
         if not filename:
             return

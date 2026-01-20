@@ -38,6 +38,7 @@ Other
   nd              Create new directory
   rn              Rename selected item
   cp              Copy cd command to dir path to clipboard
+  t               Open terminal in current directory
   .               Toggle show hidden files/dirs
   ?               Toggle this help
   Ctrl+C          Quit the app

@@ -132,6 +132,10 @@ class InputHandler:
             self.nav.dir_manager.toggle_hidden()
             return False
 
+        if key == ord('t'):
+            self.nav.open_terminal()
+            return False
+
         # === Multi-mark operations ===
         if self.nav.marked_items:
             if key == ord('p'):
