@@ -39,8 +39,8 @@ class FileNavigator:
         self.history: List[str] = [start_real]
         self.history_index = 0
 
-        self.bookmarks: List[str] = [start_real]
-        self.bookmark_index = 0
+        self.bookmarks: List[str] = []
+        self.bookmark_index = -1
 
     def open_file(self, filepath: str):
         import mimetypes
@@ -669,9 +669,8 @@ class FileNavigator:
         return True
 
     def go_history_back(self):
-        if not self.bookmarks:
-            return False
-        if self.bookmark_index <= 0:
+        if not self.bookmarks or self.bookmark_index <= 0:
+            self.status_message = "No previous bookmark"
             return False
         self.bookmark_index -= 1
         self._set_current_path(self.bookmarks[self.bookmark_index])
@@ -679,9 +678,8 @@ class FileNavigator:
         return True
 
     def go_history_forward(self):
-        if not self.bookmarks:
-            return False
-        if self.bookmark_index >= len(self.bookmarks) - 1:
+        if not self.bookmarks or self.bookmark_index >= len(self.bookmarks) - 1:
+            self.status_message = "No next bookmark"
             return False
         self.bookmark_index += 1
         self._set_current_path(self.bookmarks[self.bookmark_index])
@@ -696,6 +694,8 @@ class FileNavigator:
         real_path = os.path.realpath(new_path)
         if real_path in self.bookmarks:
             self.bookmark_index = self.bookmarks.index(real_path)
+        elif not self.bookmarks:
+            self.bookmark_index = -1
 
     def reset_to_home(self):
         home = self.dir_manager.home_path

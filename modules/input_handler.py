@@ -29,6 +29,12 @@ class InputHandler:
         if self.pending_comma and (time.time() - self.comma_timestamp > self.comma_timeout):
             self._reset_comma()
 
+    def _flash(self):
+        try:
+            curses.flash()
+        except curses.error:
+            pass
+
     def _clear_clipboard(self):
         self.nav.clipboard.cleanup()
         self.nav.status_message = "Clipboard cleared"
@@ -36,16 +42,17 @@ class InputHandler:
 
     def _leader_rename(self, selection):
         if not selection:
-            curses.flash()
+            self._flash()
             return
         self.nav.rename_selected()
 
     def _leader_copy_path(self):
         self.nav.copy_current_path()
 
-    def _leader_bookmark(self, context_path):
-        target = context_path or self.nav.dir_manager.current_path
-        self.nav.add_bookmark(target)
+    def _leader_bookmark(self):
+        target = self.nav.dir_manager.current_path
+        if not self.nav.add_bookmark(target):
+            self._flash()
 
     def _handle_comma_command(self, key, total: int, selection, context_path, scope_range, target_dir) -> bool:
         ch = self._key_to_char(key)
@@ -71,7 +78,7 @@ class InputHandler:
             "nd": lambda: self.nav.create_new_directory(base_dir),
             "rn": lambda: self._leader_rename(selection),
             "cp": self._leader_copy_path,
-            "b": lambda: self._leader_bookmark(context_path),
+            "b": self._leader_bookmark,
         }
 
         if command in command_map:
@@ -330,18 +337,16 @@ class InputHandler:
             if self.nav.go_history_back():
                 self.in_filter_mode = False
                 self.nav.dir_manager.filter_pattern = ""
-                self.nav.status_message = "History back"
             else:
-                curses.flash()
+                self._flash()
             return False
 
         if key == 12:  # Ctrl+L
             if self.nav.go_history_forward():
                 self.in_filter_mode = False
                 self.nav.dir_manager.filter_pattern = ""
-                self.nav.status_message = "History forward"
             else:
-                curses.flash()
+                self._flash()
             return False
 
         # === Toggle mark with 'm' — now using full path ===
@@ -403,7 +408,7 @@ class InputHandler:
                 noun = "item" if count == 1 else "items"
                 self.nav.status_message = f"Pasted {count} {noun}"
             except Exception:
-                curses.flash()
+                self._flash()
             return False
 
         if key == ord('x') and total > 0 and selected_path:
@@ -414,7 +419,7 @@ class InputHandler:
                     os.remove(selected_path)
                 self.nav.status_message = f"Deleted {selected_name}"
             except Exception:
-                curses.flash()
+                self._flash()
             finally:
                 self.nav.need_redraw = True
             return False
@@ -429,7 +434,7 @@ class InputHandler:
                     self.nav.clipboard.yank(selected_path, selected_name, selected_is_dir, cut=True)
                     handled = True
                 except Exception:
-                    curses.flash()
+                    self._flash()
             self.pending_operator = None
             if handled:
                 return False
@@ -443,7 +448,7 @@ class InputHandler:
                     self.nav.clipboard.yank(selected_path, selected_name, selected_is_dir, cut=False)
                     handled = True
                 except Exception:
-                    curses.flash()
+                    self._flash()
             self.pending_operator = None
             if handled:
                 return False
@@ -494,7 +499,7 @@ class InputHandler:
 
     def _delete_marked(self):
         if not self.nav.marked_items:
-            curses.flash()
+            self._flash()
             return
 
         success = True
@@ -511,13 +516,13 @@ class InputHandler:
         if success:
             self.nav.marked_items.clear()
         else:
-            curses.flash()
+            self._flash()
 
         self.nav.need_redraw = True
 
     def _move_or_copy_marked(self, dest_dir, copy_only: bool):
         if not self.nav.marked_items:
-            curses.flash()
+            self._flash()
             return
 
         if not dest_dir or not os.path.isdir(dest_dir):
@@ -554,7 +559,7 @@ class InputHandler:
         if success:
             self.nav.marked_items.clear()
         else:
-            curses.flash()
+            self._flash()
 
         self.nav.need_redraw = True
 
@@ -571,7 +576,7 @@ class InputHandler:
             entries.append((full_path, name, is_dir))
 
         if not entries:
-            curses.flash()
+            self._flash()
             self.nav.marked_items.clear()
             return False
 
@@ -584,7 +589,7 @@ class InputHandler:
             self.nav.status_message = f"{action} {count} {noun} to clipboard"
             return True
         except Exception:
-            curses.flash()
+            self._flash()
             return False
 
     def _determine_target_directory(self, selected_path, selected_is_dir):

@@ -48,9 +48,8 @@ class DummyNavigator:
         self.show_help = False
         self.help_scroll = 0
         self.cheatsheet = ""
-        real_current = os.path.realpath(current_path)
-        self.bookmarks = [real_current]
-        self.bookmark_index = 0
+        self.bookmarks = []
+        self.bookmark_index = -1
 
     def build_display_items(self):
         return list(self.display_items)
@@ -78,7 +77,13 @@ class DummyNavigator:
         self.reset_home_called = True
         self.expanded_nodes.clear()
         self.dir_manager.current_path = os.path.realpath(self.dir_manager.home_path)
-        self.bookmark_index = 0
+        if self.bookmarks:
+            try:
+                self.bookmark_index = self.bookmarks.index(self.dir_manager.current_path)
+            except ValueError:
+                self.bookmark_index = -1
+        else:
+            self.bookmark_index = -1
 
     def add_bookmark(self, path=None):
         target = path or self.dir_manager.current_path
@@ -92,14 +97,14 @@ class DummyNavigator:
             self.status_message = f"Bookmarked {real}"
 
     def go_history_back(self):
-        if self.bookmark_index <= 0:
+        if not self.bookmarks or self.bookmark_index <= 0:
             return False
         self.bookmark_index -= 1
         self.dir_manager.current_path = self.bookmarks[self.bookmark_index]
         return True
 
     def go_history_forward(self):
-        if self.bookmark_index >= len(self.bookmarks) - 1:
+        if not self.bookmarks or self.bookmark_index >= len(self.bookmarks) - 1:
             return False
         self.bookmark_index += 1
         self.dir_manager.current_path = self.bookmarks[self.bookmark_index]
@@ -284,9 +289,9 @@ def test_bookmark_command_adds_current_path(tmp_path):
     handler.handle_key(None, ord(','))
     handler.handle_key(None, ord('b'))
 
-    expected = [os.path.realpath(str(root)), os.path.realpath(str(sub))]
+    expected = [os.path.realpath(str(sub))]
     assert nav.bookmarks == expected
-    assert nav.bookmark_index == 1
+    assert nav.bookmark_index == 0
     assert "Bookmarked" in nav.status_message
 
 
@@ -300,6 +305,7 @@ def test_ctrl_navigation_uses_bookmarks(tmp_path):
     nav = FileNavigator(str(root))
     handler = nav.input_handler
 
+    nav.add_bookmark(str(root))
     nav.change_directory(str(sub_a))
     nav.add_bookmark()
     nav.change_directory(str(sub_b))
@@ -319,8 +325,42 @@ def test_ctrl_navigation_uses_bookmarks(tmp_path):
     handler.handle_key(None, 8)  # Ctrl+H again
     assert nav.dir_manager.current_path == os.path.realpath(str(root))
 
+    handler.handle_key(None, 8)  # Ctrl+H at first bookmark should stay put
+    assert nav.dir_manager.current_path == os.path.realpath(str(root))
+
     handler.handle_key(None, 12)  # Ctrl+L
     assert nav.dir_manager.current_path == os.path.realpath(str(sub_a))
 
     handler.handle_key(None, 12)  # Ctrl+L again
     assert nav.dir_manager.current_path == os.path.realpath(str(sub_b))
+
+
+def test_bookmark_command_ignores_expanded_context(tmp_path):
+    root = tmp_path
+    parent = root / "p"
+    child = parent / "c"
+    inner_file = child / "inner.txt"
+    parent.mkdir()
+    child.mkdir()
+    inner_file.write_text("hello")
+
+    nav = FileNavigator(str(root))
+    handler = nav.input_handler
+
+    nav.expanded_nodes.update({
+        os.path.realpath(str(parent)),
+        os.path.realpath(str(child)),
+    })
+
+    items = nav.build_display_items()
+    target_path = os.path.realpath(str(inner_file))
+    target_index = next(i for i, (_, _, path, _) in enumerate(items) if os.path.realpath(path) == target_path)
+    nav.browser_selected = target_index
+
+    handler.handle_key(None, ord(','))
+    handler.handle_key(None, ord('b'))
+
+    expected = [os.path.realpath(str(root))]
+    assert nav.bookmarks == expected
+    assert nav.bookmark_index == 0
+    assert "Bookmarked" in nav.status_message
