@@ -45,6 +45,7 @@ class FileNavigator:
         self.visual_anchor_index: Optional[int] = None
         self.visual_active_index: Optional[int] = None
         self.matrix_state = None
+        self.matrix_return_map: dict[str, int] = {}
 
     def open_file(self, filepath: str):
         self.file_actions.open_file(filepath)
@@ -210,6 +211,8 @@ class FileNavigator:
         self.browser_selected = 0
         self.list_offset = 0
         self.need_redraw = True
+        if self.layout_mode == "matrix":
+            self.restore_matrix_position(new_path)
         self.reset_matrix_state()
         real_path = os.path.realpath(new_path)
         if real_path in self.bookmarks:
@@ -228,6 +231,7 @@ class FileNavigator:
             return
         self.layout_mode = "matrix"
         self.reset_matrix_state()
+        self.matrix_return_map.clear()
         self.status_message = "Matrix view activated"
         self.need_redraw = True
 
@@ -236,6 +240,7 @@ class FileNavigator:
             return
         self.layout_mode = "list"
         self.reset_matrix_state()
+        self.matrix_return_map.clear()
         self.status_message = "List view restored"
         self.need_redraw = True
 
@@ -247,6 +252,24 @@ class FileNavigator:
 
     def reset_matrix_state(self):
         self.matrix_state = None
+
+    def remember_matrix_position(self):
+        current = os.path.realpath(self.dir_manager.current_path)
+        self.matrix_return_map[current] = self.browser_selected
+
+    def discard_matrix_position(self, path: str):
+        real = os.path.realpath(path)
+        self.matrix_return_map.pop(real, None)
+
+    def restore_matrix_position(self, new_path: str):
+        real_path = os.path.realpath(new_path)
+        stored = self.matrix_return_map.pop(real_path, None)
+        if stored is not None:
+            items = self.build_display_items()
+            if items:
+                self.browser_selected = max(0, min(stored, len(items) - 1))
+            else:
+                self.browser_selected = 0
 
     def enter_visual_mode(self, index: int):
         items = self.build_display_items()

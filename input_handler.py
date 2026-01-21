@@ -591,10 +591,15 @@ class InputHandler:
                     return False
                 if key == ord("j"):
                     if selected_is_dir and selected_path:
+                        previous_path = self.nav.dir_manager.current_path
+                        self.nav.remember_matrix_position()
                         if self.nav.change_directory(selected_path):
                             self.in_filter_mode = False
                             self.nav.dir_manager.filter_pattern = ""
                             self.nav.exit_visual_mode()
+                            self.nav.update_visual_active(self.nav.browser_selected)
+                        else:
+                            self.nav.discard_matrix_position(previous_path)
                     elif selected_path:
                         self.nav.open_file(selected_path)
                     return False
@@ -605,6 +610,7 @@ class InputHandler:
                             self.in_filter_mode = False
                             self.nav.dir_manager.filter_pattern = ""
                             self.nav.exit_visual_mode()
+                            self.nav.update_visual_active(self.nav.browser_selected)
                     return False
             else:
                 if key == ord("j"):
