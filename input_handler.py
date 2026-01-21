@@ -891,21 +891,8 @@ class InputHandler:
                 if path not in unique_paths:
                     unique_paths.append(path)
 
-        if not unique_paths:
-            self.nav.exit_visual_mode()
-            return
-
-        newly_added = 0
-        for path in unique_paths:
-            if path not in self.nav.marked_items:
-                newly_added += 1
-            self.nav.marked_items.add(path)
-
         count = len(unique_paths)
         noun = "item" if count == 1 else "items"
         self.nav.exit_visual_mode(clear_message=False)
-        if newly_added == 0 and count > 0:
-            self.nav.status_message = f"Selection already marked ({count} {noun})"
-        else:
-            added_text = "" if newly_added == count else f" (added {newly_added})"
-            self.nav.status_message = f"Marked {count} {noun}{added_text}".strip()
+        if count:
+            self.nav.status_message = f"Pinned {count} {noun}"

@@ -311,6 +311,7 @@ class FileNavigator:
         self.visual_mode = True
         self.visual_anchor_index = index
         self.visual_active_index = index
+        self._apply_visual_marks()
         self.need_redraw = True
 
     def reanchor_visual_mode(self, index: int):
@@ -332,6 +333,7 @@ class FileNavigator:
         if self.visual_anchor_index is None:
             self.visual_anchor_index = index
         self.visual_active_index = index
+        self._apply_visual_marks()
         self.need_redraw = True
 
     def get_visual_indices(self, total: int) -> list[int]:
@@ -352,3 +354,21 @@ class FileNavigator:
         start = min(anchor, active)
         end = max(anchor, active)
         return list(range(start, end + 1))
+
+    def _apply_visual_marks(self):
+        if not self.visual_mode:
+            return
+        items = self.build_display_items()
+        total = len(items)
+        indices = self.get_visual_indices(total)
+        if not indices:
+            return
+        added = False
+        for idx in indices:
+            if 0 <= idx < total:
+                path = items[idx][2]
+                if path not in self.marked_items:
+                    self.marked_items.add(path)
+                    added = True
+        if added:
+            self.need_redraw = True
