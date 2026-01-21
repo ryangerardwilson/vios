@@ -104,48 +104,51 @@ class UIRenderer:
         scroll_indicator: str = "",
         visual_count: Optional[int] = None,
     ) -> str:
-        help_hint = "" if self.nav.show_help else "  ? help"
+        parts: list[str] = []
 
-        filter_text = ""
+        if mode_indicator:
+            parts.append(mode_indicator)
+
+        if not self.nav.show_help:
+            parts.append("? help")
+
+        if scroll_indicator.strip():
+            parts.append(scroll_indicator.strip())
+
         if self.nav.dir_manager.filter_pattern:
             fp = self.nav.dir_manager.filter_pattern
-            filter_text = f"  {fp if fp.startswith('/') else '/' + fp}"
+            parts.append(fp if fp.startswith('/') else '/' + fp)
 
-        leader_text = ""
         leader_seq = getattr(self.nav, "leader_sequence", "")
         if leader_seq:
-            leader_text = f"  {leader_seq}"
+            parts.append(leader_seq)
 
-        hidden_indicator = self.nav.dir_manager.get_hidden_status_text()
+        hidden_indicator = self.nav.dir_manager.get_hidden_status_text().strip()
+        if hidden_indicator:
+            parts.append(hidden_indicator)
 
-        yank_text = ""
         clip_status = self.nav.clipboard.get_status_text()
         if clip_status:
-            yank_text = f"  CLIP: {clip_status}"
+            parts.append(f"CLIP: {clip_status}")
 
-        mark_text = (
-            f"  MARKED: {len(self.nav.marked_items)}" if self.nav.marked_items else ""
-        )
+        if self.nav.marked_items:
+            parts.append(f"MARKED: {len(self.nav.marked_items)}")
 
-        visual_text = ""
         if visual_count is None and getattr(self.nav, "visual_mode", False):
             items = self.nav.build_display_items()
             indices = getattr(self.nav, "get_visual_indices", lambda _t: [])(len(items))
             visual_count = len(indices)
         if visual_count:
             noun = "item" if visual_count == 1 else "items"
-            visual_text = f"  -- VISUAL -- ({visual_count} {noun})"
+            parts.append(f"-- VISUAL -- ({visual_count} {noun})")
 
-        message_text = f"  {self.nav.status_message}" if self.nav.status_message else ""
+        if self.nav.status_message:
+            parts.append(self.nav.status_message)
 
-        mode_text = f"  {mode_indicator}" if mode_indicator else ""
+        if not parts:
+            return " "
 
-        status = (
-            f"{mode_text}{help_hint}{filter_text}{leader_text}{hidden_indicator}{scroll_indicator}"
-            f"{yank_text}{mark_text}{visual_text}{message_text}"
-        )
-
-        return status or " "
+        return "  ".join(parts)
 
     # ------------------------------------------------------------------
     # Help view
