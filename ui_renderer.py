@@ -268,7 +268,7 @@ class UIRenderer:
             scroll_indicator=scroll_indicator,
             visual_count=visual_count,
         )
-        self._render_status_bar(stdscr, status, max_y, max_x)
+        self._render_status_bar(stdscr, status, max_y, max_x, bold=False)
 
     # ------------------------------------------------------------------
     # Matrix layout
@@ -375,7 +375,7 @@ class UIRenderer:
             scroll_indicator=selection_indicator,
             visual_count=len(visual_indices) if getattr(self.nav, "visual_mode", False) else 0,
         )
-        self._render_status_bar(stdscr, status, max_y, max_x)
+        self._render_status_bar(stdscr, status, max_y, max_x, bold=False)
 
     def _compute_columns(self, count: int, max_x: int) -> list[int]:
         if count <= 0 or max_x <= 0:
