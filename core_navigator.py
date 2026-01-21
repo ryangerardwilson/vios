@@ -25,6 +25,7 @@ class FileNavigator:
         self.browser_selected = 0
         self.list_offset = 0
         self.need_redraw = True
+        self.layout_mode = "list"
 
         # Multi-mark support — now using full absolute paths
         self.marked_items = set()  # set of str (absolute paths)
@@ -43,6 +44,7 @@ class FileNavigator:
         self.visual_mode = False
         self.visual_anchor_index: Optional[int] = None
         self.visual_active_index: Optional[int] = None
+        self.matrix_state = None
 
     def open_file(self, filepath: str):
         self.file_actions.open_file(filepath)
@@ -208,6 +210,7 @@ class FileNavigator:
         self.browser_selected = 0
         self.list_offset = 0
         self.need_redraw = True
+        self.reset_matrix_state()
         real_path = os.path.realpath(new_path)
         if real_path in self.bookmarks:
             self.bookmark_index = self.bookmarks.index(real_path)
@@ -219,6 +222,31 @@ class FileNavigator:
         self.expanded_nodes.clear()
         self.dir_manager.filter_pattern = ""
         self.change_directory(home)
+
+    def enter_matrix_mode(self):
+        if self.layout_mode == "matrix":
+            return
+        self.layout_mode = "matrix"
+        self.reset_matrix_state()
+        self.status_message = "Matrix view activated"
+        self.need_redraw = True
+
+    def enter_list_mode(self):
+        if self.layout_mode == "list":
+            return
+        self.layout_mode = "list"
+        self.reset_matrix_state()
+        self.status_message = "List view restored"
+        self.need_redraw = True
+
+    def toggle_layout_mode(self):
+        if self.layout_mode == "list":
+            self.enter_matrix_mode()
+        else:
+            self.enter_list_mode()
+
+    def reset_matrix_state(self):
+        self.matrix_state = None
 
     def enter_visual_mode(self, index: int):
         items = self.build_display_items()

@@ -22,17 +22,6 @@ class Orchestrator:
         navigator.renderer.stdscr = stdscr
 
         curses.curs_set(0)
-        curses.start_color()
-        curses.use_default_colors()
-        color_pairs = [
-            curses.COLOR_CYAN,
-            curses.COLOR_WHITE,
-            curses.COLOR_YELLOW,
-            curses.COLOR_RED,
-            curses.COLOR_GREEN,
-        ]
-        for index, color in enumerate(color_pairs, start=1):
-            curses.init_pair(index, color, -1)
 
         try:
             stdscr.keypad(True)
@@ -45,9 +34,13 @@ class Orchestrator:
         navigator.need_redraw = True
 
         while True:
-            if navigator.need_redraw:
+            should_render = navigator.need_redraw or navigator.layout_mode == "matrix"
+            if should_render:
                 navigator.renderer.render()
-                navigator.need_redraw = False
+                if navigator.layout_mode != "matrix":
+                    navigator.need_redraw = False
+                else:
+                    navigator.need_redraw = False
 
             key = stdscr.getch()
             if key == -1:

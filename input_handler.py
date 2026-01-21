@@ -368,6 +368,13 @@ class InputHandler:
             ):
                 return False
 
+        if key in (10, 13, curses.KEY_ENTER):
+            if self.nav.layout_mode == "list":
+                self.nav.enter_matrix_mode()
+            else:
+                self.nav.enter_list_mode()
+            return False
+
         if key == 8:  # Ctrl+H
             self.nav.exit_visual_mode()
             if self.nav.go_history_back():
@@ -572,7 +579,7 @@ class InputHandler:
                     self.in_filter_mode = False
                     self.nav.dir_manager.filter_pattern = ""
                     self.nav.exit_visual_mode()
-        elif key in (curses.KEY_RIGHT, ord("l"), 10, 13) and total > 0:
+        elif key in (curses.KEY_RIGHT, ord("l")) and total > 0:
             if selected_is_dir:
                 if self.nav.change_directory(selected_path):
                     self.in_filter_mode = False

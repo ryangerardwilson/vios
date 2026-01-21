@@ -1,7 +1,38 @@
 # ~/Apps/vios/ui_renderer.py
 import curses
-from typing import Any, Optional, Tuple, cast
+import random
+import time
+from dataclasses import dataclass
+from typing import Any, Optional, Sequence, Tuple, cast
+
 from directory_manager import DirectoryManager
+
+
+@dataclass
+class MatrixStream:
+    index: int
+    name: str
+    path: str
+    is_dir: bool
+    depth: int
+    column: int
+    velocity: float
+    head: float
+    chars: str
+
+    @property
+    def length(self) -> int:
+        return max(1, len(self.chars))
+
+
+@dataclass
+class MatrixState:
+    streams: list[MatrixStream]
+    signature: Tuple[str, ...]
+    max_height: int
+    max_width: int
+    last_update: float
+    index_map: dict[int, MatrixStream]
 
 
 class UIRenderer:
@@ -13,8 +44,29 @@ class UIRenderer:
         stdscr = self.stdscr
         if stdscr is None:
             return
-        max_y, max_x = cast(Tuple[int, int], stdscr.getmaxyx())
 
+        max_y, max_x = cast(Tuple[int, int], stdscr.getmaxyx())
+        self._clear_screen(stdscr)
+
+        if self.nav.show_help:
+            self._render_help(stdscr, max_y, max_x)
+            stdscr.refresh()
+            return
+
+        display_path = DirectoryManager.pretty_path(self.nav.dir_manager.current_path)
+        self._render_path_header(stdscr, display_path, max_x)
+
+        if self.nav.layout_mode == "matrix":
+            self._render_matrix(stdscr, max_y, max_x)
+        else:
+            self._render_list(stdscr, max_y, max_x)
+
+        stdscr.refresh()
+
+    # ------------------------------------------------------------------
+    # Shared helpers
+
+    def _clear_screen(self, stdscr: Any) -> None:
         try:
             stdscr.erase()
         except Exception:
@@ -23,53 +75,105 @@ class UIRenderer:
             except Exception:
                 pass
 
-        if self.nav.show_help:
-            lines = [line.rstrip() for line in self.nav.cheatsheet.strip().split("\n")]
-            total_lines = len(lines)
-            max_visible = max(1, max_y - 1)
-            start = max(0, min(self.nav.help_scroll, max(0, total_lines - max_visible)))
-            visible = lines[start : start + max_visible]
-            for i, line in enumerate(visible):
-                try:
-                    stdscr.addstr(i, 0, line[:max_x])
-                except curses.error:
-                    pass
-            status = f"HELP {start + 1}-{start + len(visible)} / {total_lines}"
-            try:
-                stdscr.move(max_y - 1, 0)
-                stdscr.clrtoeol()
-                stdscr.addstr(
-                    max_y - 1,
-                    0,
-                    status[: max_x - 1],
-                    curses.color_pair(5) | curses.A_BOLD,
-                )
-            except curses.error:
-                pass
-            stdscr.refresh()
-            return
-
-        display_path = DirectoryManager.pretty_path(self.nav.dir_manager.current_path)
+    def _render_path_header(self, stdscr: Any, display_path: str, max_x: int) -> None:
         try:
-            stdscr.addstr(
-                0, 0, display_path[:max_x], curses.color_pair(2) | curses.A_BOLD
-            )
+            stdscr.addstr(0, 0, display_path[:max_x], curses.A_BOLD)
+        except curses.error:
+            pass
+        try:
+            stdscr.move(1, 0)
+            stdscr.clrtoeol()
         except curses.error:
             pass
 
-        if max_y > 1:
+    def _render_status_bar(self, stdscr: Any, text: str, max_y: int, max_x: int, *, bold: bool = True) -> None:
+        if max_y <= 0:
+            return
+        attr = curses.A_BOLD if bold else curses.A_NORMAL
+        try:
+            stdscr.move(max_y - 1, 0)
+            stdscr.clrtoeol()
+            stdscr.addstr(max_y - 1, 0, text[: max_x - 1] if max_x > 0 else text, attr)
+        except curses.error:
+            pass
+
+    def _compose_status(
+        self,
+        *,
+        mode_indicator: str = "",
+        scroll_indicator: str = "",
+        visual_count: Optional[int] = None,
+    ) -> str:
+        help_hint = "" if self.nav.show_help else "  ? help"
+
+        filter_text = ""
+        if self.nav.dir_manager.filter_pattern:
+            fp = self.nav.dir_manager.filter_pattern
+            filter_text = f"  {fp if fp.startswith('/') else '/' + fp}"
+
+        leader_text = ""
+        leader_seq = getattr(self.nav, "leader_sequence", "")
+        if leader_seq:
+            leader_text = f"  {leader_seq}"
+
+        hidden_indicator = self.nav.dir_manager.get_hidden_status_text()
+
+        yank_text = ""
+        clip_status = self.nav.clipboard.get_status_text()
+        if clip_status:
+            yank_text = f"  CLIP: {clip_status}"
+
+        mark_text = (
+            f"  MARKED: {len(self.nav.marked_items)}" if self.nav.marked_items else ""
+        )
+
+        visual_text = ""
+        if visual_count is None and getattr(self.nav, "visual_mode", False):
+            items = self.nav.build_display_items()
+            indices = getattr(self.nav, "get_visual_indices", lambda _t: [])(len(items))
+            visual_count = len(indices)
+        if visual_count:
+            noun = "item" if visual_count == 1 else "items"
+            visual_text = f"  -- VISUAL -- ({visual_count} {noun})"
+
+        message_text = f"  {self.nav.status_message}" if self.nav.status_message else ""
+
+        mode_text = f"  {mode_indicator}" if mode_indicator else ""
+
+        status = (
+            f"{mode_text}{help_hint}{filter_text}{leader_text}{hidden_indicator}{scroll_indicator}"
+            f"{yank_text}{mark_text}{visual_text}{message_text}"
+        )
+
+        return status or " "
+
+    # ------------------------------------------------------------------
+    # Help view
+
+    def _render_help(self, stdscr: Any, max_y: int, max_x: int) -> None:
+        lines = [line.rstrip() for line in self.nav.cheatsheet.strip().split("\n")]
+        total_lines = len(lines)
+        max_visible = max(1, max_y - 1)
+        start = max(0, min(self.nav.help_scroll, max(0, total_lines - max_visible)))
+        visible = lines[start : start + max_visible]
+        for i, line in enumerate(visible):
             try:
-                stdscr.move(1, 0)
-                stdscr.clrtoeol()
+                stdscr.addstr(i, 0, line[:max_x])
             except curses.error:
                 pass
+        status = f"HELP {start + 1}-{start + len(visible)} / {total_lines}"
+        self._render_status_bar(stdscr, status, max_y, max_x)
 
+    # ------------------------------------------------------------------
+    # List layout
+
+    def _render_list(self, stdscr: Any, max_y: int, max_x: int) -> None:
         list_start_y = 2
         available_height = max_y - list_start_y - 1
         if available_height < 0:
             available_height = 0
 
-        for yy in range(list_start_y, max_y - 1):
+        for yy in range(list_start_y, max(0, max_y - 1)):
             try:
                 stdscr.move(yy, 0)
                 stdscr.clrtoeol()
@@ -78,12 +182,12 @@ class UIRenderer:
 
         items = self.nav.build_display_items()
         total = len(items)
-        visual_indices = set()
+        visual_indices_set = set()
         visual_count = 0
         if hasattr(self.nav, "get_visual_indices"):
             indices = self.nav.get_visual_indices(total)
-            visual_indices = set(indices)
-            visual_count = len(visual_indices)
+            visual_indices_set = set(indices)
+            visual_count = len(visual_indices_set)
 
         if total > 0:
             if (
@@ -114,10 +218,10 @@ class UIRenderer:
             )
             try:
                 stdscr.addstr(
-                    list_start_y + available_height // 2,
+                    list_start_y + (available_height // 2 if available_height else 0),
                     max(0, (max_x - len(msg)) // 2),
                     msg,
-                    curses.color_pair(3),
+                    curses.A_DIM,
                 )
             except curses.error:
                 pass
@@ -134,14 +238,10 @@ class UIRenderer:
                 else:
                     exp_symbol = "  "
 
-                base_color = (
-                    curses.color_pair(1) | curses.A_BOLD
-                    if global_idx == self.nav.browser_selected
-                    else curses.color_pair(2)
-                )
-                color = base_color
-                if global_idx in visual_indices:
-                    color |= curses.A_REVERSE
+                attr = curses.A_REVERSE | curses.A_BOLD if global_idx == self.nav.browser_selected else curses.A_NORMAL
+                if global_idx in visual_indices_set:
+                    attr |= curses.A_UNDERLINE
+
                 suffix = "/" if is_dir else ""
                 indent = "  " * depth
                 line = f"{indent}{sel_block}{exp_symbol}{name}{suffix}"
@@ -150,52 +250,179 @@ class UIRenderer:
                 try:
                     stdscr.move(y, 0)
                     stdscr.clrtoeol()
-                    stdscr.addstr(y, 0, line[:max_x], color)
+                    stdscr.addstr(y, 0, line[:max_x], attr)
                 except curses.error:
                     pass
 
-        # Status bar
-        yank_text = ""
-        clip_status = self.nav.clipboard.get_status_text()
-        if clip_status:
-            yank_text = f"  CLIP: {clip_status}"
-
-        filter_text = ""
-        if self.nav.dir_manager.filter_pattern:
-            fp = self.nav.dir_manager.filter_pattern
-            filter_text = f"  {fp if fp.startswith('/') else '/' + fp}"
-
-        leader_text = ""
-        leader_seq = getattr(self.nav, "leader_sequence", "")
-        if leader_seq:
-            leader_text = f"  {leader_seq}"
-
-        hidden_indicator = self.nav.dir_manager.get_hidden_status_text()
-        help_hint = "  ? help" if not self.nav.show_help else ""
         scroll_indicator = ""
-        if total > available_height:
+        if total > available_height and available_height > 0:
             top = self.nav.list_offset + 1
             bottom = min(total, self.nav.list_offset + available_height)
             scroll_indicator = f"  [{top}-{bottom}/{total}]"
 
-        mark_text = (
-            f"  MARKED: {len(self.nav.marked_items)}" if self.nav.marked_items else ""
+        status = self._compose_status(
+            mode_indicator="",
+            scroll_indicator=scroll_indicator,
+            visual_count=visual_count,
         )
-        visual_text = ""
-        if getattr(self.nav, "visual_mode", False) and visual_count:
-            noun = "item" if visual_count == 1 else "items"
-            visual_text = f"  -- VISUAL -- ({visual_count} {noun})"
-        message_text = f"  {self.nav.status_message}" if self.nav.status_message else ""
+        self._render_status_bar(stdscr, status, max_y, max_x)
 
-        status = f"{help_hint}{filter_text}{leader_text}{hidden_indicator}{scroll_indicator}{yank_text}{mark_text}{visual_text}{message_text}"
+    # ------------------------------------------------------------------
+    # Matrix layout
 
-        try:
-            stdscr.move(max_y - 1, 0)
-            stdscr.clrtoeol()
-            stdscr.addstr(
-                max_y - 1, 0, status[: max_x - 1], curses.color_pair(5) | curses.A_BOLD
+    def _render_matrix(self, stdscr: Any, max_y: int, max_x: int) -> None:
+        content_start_y = 2
+        available_rows = max_y - content_start_y - 1
+        label_row = max_y - 2
+
+        if available_rows <= 0 or max_x <= 0:
+            msg = "(matrix view needs more space)"
+            try:
+                stdscr.addstr(1, 0, msg[:max_x] if max_x > 0 else msg, curses.A_DIM)
+            except curses.error:
+                pass
+            status = self._compose_status(mode_indicator="[Matrix]")
+            self._render_status_bar(stdscr, status, max_y, max_x)
+            return
+
+        items = self.nav.build_display_items()
+        total = len(items)
+
+        if total == 0:
+            msg = "(nothing to rain)"
+            try:
+                stdscr.addstr(content_start_y, max(0, (max_x - len(msg)) // 2), msg)
+            except curses.error:
+                pass
+            status = self._compose_status(mode_indicator="[Matrix]")
+            self._render_status_bar(stdscr, status, max_y, max_x)
+            return
+
+        matrix_height = max(1, available_rows - 1)
+        for y in range(content_start_y, max(0, max_y - 1)):
+            try:
+                stdscr.move(y, 0)
+                stdscr.clrtoeol()
+            except curses.error:
+                pass
+        state = self._ensure_matrix_state(items, matrix_height, max_x)
+
+        now = time.monotonic()
+        delta = 0.0 if state.last_update == 0 else now - state.last_update
+        state.last_update = now
+
+        selected_index = 0 if total == 0 else max(0, min(self.nav.browser_selected, total - 1))
+        if total > 0:
+            self.nav.browser_selected = selected_index
+
+        for stream in state.streams:
+            if stream.index == selected_index:
+                continue
+            stream.head = (stream.head + stream.velocity * delta) % matrix_height
+
+        for stream in state.streams:
+            col = max(0, min(max_x - 1, stream.column))
+            chars = stream.chars or "0"
+            for row_offset in range(matrix_height):
+                y = content_start_y + row_offset
+                if y >= label_row:
+                    break
+                offset = int((stream.head - row_offset) % stream.length)
+                ch = chars[offset]
+                attr = curses.A_DIM
+                if stream.index == selected_index:
+                    attr = curses.A_BOLD if offset == 0 else curses.A_NORMAL
+                elif offset == 0:
+                    attr = curses.A_NORMAL
+                try:
+                    stdscr.addch(y, col, ch, attr)
+                except curses.error:
+                    pass
+
+        selected_stream = state.index_map.get(selected_index)
+        if selected_stream and 0 <= label_row < max_y:
+            name, is_dir, *_ = items[selected_index]
+            label = name + ("/" if is_dir else "")
+            start_x = selected_stream.column - len(label) // 2
+            start_x = max(0, min(max_x - len(label), start_x))
+            try:
+                stdscr.move(label_row, 0)
+                stdscr.clrtoeol()
+                stdscr.addstr(label_row, start_x, label[: max_x - start_x], curses.A_BOLD)
+            except curses.error:
+                pass
+
+        selection_indicator = f"  [{selected_index + 1}/{total}]"
+        status = self._compose_status(mode_indicator="[Matrix]", scroll_indicator=selection_indicator)
+        self._render_status_bar(stdscr, status, max_y, max_x)
+
+    def _compute_columns(self, count: int, max_x: int) -> list[int]:
+        if count <= 0 or max_x <= 0:
+            return []
+        positions: list[int] = []
+        for idx in range(count):
+            pos = int((idx + 1) * max_x / (count + 1))
+            pos = max(0, min(max_x - 1, pos))
+            if positions and pos <= positions[-1]:
+                pos = min(max_x - 1, positions[-1] + 1)
+            positions.append(pos)
+        return positions
+
+    def _ensure_matrix_state(
+        self,
+        items: Sequence[Tuple[str, bool, str, int]],
+        matrix_height: int,
+        max_x: int,
+    ) -> MatrixState:
+        signature = tuple(entry[2] for entry in items)
+        state: Optional[MatrixState] = getattr(self.nav, "matrix_state", None)
+
+        if (
+            state is None
+            or state.signature != signature
+            or state.max_height != matrix_height
+            or state.max_width != max_x
+        ):
+            streams: list[MatrixStream] = []
+            columns = self._compute_columns(len(items), max_x)
+            pattern_length = max(32, matrix_height * 2)
+            for idx, (name, is_dir, path, depth) in enumerate(items):
+                column = columns[idx] if idx < len(columns) else (idx % max_x)
+                velocity = random.uniform(5.0, 12.0)
+                head = random.uniform(0, matrix_height - 1 if matrix_height > 1 else 0)
+                base_label = name + ("/" if is_dir else "")
+                sanitized = base_label.strip()
+                if not sanitized:
+                    sanitized = "?"
+                sanitized = sanitized.replace(" ", "_")
+                if len(sanitized) == 1:
+                    chars = sanitized * pattern_length
+                else:
+                    repeats = (pattern_length // len(sanitized)) + 2
+                    chars = (sanitized * repeats)[:pattern_length]
+                streams.append(
+                    MatrixStream(
+                        index=idx,
+                        name=name,
+                        path=path,
+                        is_dir=is_dir,
+                        depth=depth,
+                        column=column,
+                        velocity=velocity,
+                        head=head,
+                        chars=chars,
+                    )
+                )
+
+            index_map = {stream.index: stream for stream in streams}
+            state = MatrixState(
+                streams=streams,
+                signature=signature,
+                max_height=matrix_height,
+                max_width=max_x,
+                last_update=0.0,
+                index_map=index_map,
             )
-        except curses.error:
-            pass
+            self.nav.matrix_state = state
 
-        stdscr.refresh()
+        return state
