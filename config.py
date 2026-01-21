@@ -5,18 +5,10 @@ from dataclasses import dataclass, field
 from typing import Dict, List
 
 
-DEFAULT_HANDLERS: Dict[str, List[List[str]]] = {
-    "pdf_viewer": [["zathura"]],
-    "image_viewer": [["swayimg"]],
-}
-
-
 @dataclass
 class UserConfig:
     matrix_mode: bool = False
-    handlers: Dict[str, List[List[str]]] = field(
-        default_factory=lambda: {key: [cmd[:] for cmd in value] for key, value in DEFAULT_HANDLERS.items()}
-    )
+    handlers: Dict[str, List[List[str]]] = field(default_factory=dict)
 
     def get_handler_commands(self, name: str) -> List[List[str]]:
         return self.handlers.get(name, [])
@@ -39,9 +31,7 @@ def _normalize_command(entry) -> List[str]:
 
 
 def _normalize_handlers(raw_handlers) -> Dict[str, List[List[str]]]:
-    handlers: Dict[str, List[List[str]]] = {
-        key: [cmd[:] for cmd in value] for key, value in DEFAULT_HANDLERS.items()
-    }
+    handlers: Dict[str, List[List[str]]] = {}
 
     if not isinstance(raw_handlers, dict):
         return handlers

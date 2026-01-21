@@ -223,8 +223,8 @@ Supported options:
   - `pdf_viewer` and `image_viewer` control the viewers for PDFs and images.
   - `editor` (optional) overrides the fallback editor used for other files.
 
-If a handler command cannot be found, `o` falls back to its built-in defaults
-(Zathura for PDFs, swayimg for images, Vim for everything else).
+If a handler command or mapping is missing, `o` simply leaves the file unopened.
+Configure viewers/editors explicitly to control how files launch.
 
 Reference template (`template_config.json`):
 
