@@ -1,16 +1,65 @@
-# Vios - Vi Operating System
+# o
 
-*A minimal, Vim-inspired file navigator for your terminal.*
+`o` is a lightweight, Vim-inspired directory browser for your terminal. Navigate
+directories, open files in your preferred editor, create new files, yank/cut/
+paste, and launch terminals — all from a clean, fast curses interface.
 
-Vios is a lightweight, hjkl-powered directory browser that feels like Vim for
-filesystem navigation. Navigate directories, open files in your preferred
-editor, create new files, yank/cut/paste, and launch terminals — all from a
-clean, fast curses interface.
+Built with Python and curses, `o` turns your terminal into a "Vi-like Operating
+System" focused purely on efficient file management.
 
-Built with Python and curses, Vios turns your terminal into a "Vi-like
-Operating System" focused purely on efficient file management.
+---
 
-## 1. Features
+## Installation
+
+### Prebuilt binary (Linux x86_64)
+
+`o` publishes PyInstaller bundles with each GitHub release. The quickest way to
+install the latest release is via the helper script:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ryangerardwilson/o/main/install.sh | bash
+```
+
+The script downloads the `o-linux-x64.tar.gz` artifact, extracts it into
+`~/.o/app`, and drops a shim in `~/.o/bin`. It will attempt to add that
+directory to your `PATH` (unless you opt out) so you can just run `o` from any
+shell.
+
+Installer flags of note:
+
+- `--version <x.y.z>` or `-v <x.y.z>`: install a specific tagged release
+  (`v0.3.0`, etc.).
+- `--version` (no argument): print the latest available release version without
+  installing.
+- `--upgrade`: reinstall only if GitHub has a newer release than your current
+  local version.
+- `--binary /path/to/o-linux-x64.tar.gz`: install from a previously downloaded
+  archive.
+- `--no-modify-path`: skip auto-updating shell config files; the script will
+  print the PATH export you should add manually.
+
+Once installed, the binary itself also supports:
+
+- `o -v` to print the installed version
+- `o -u` to reinstall via the latest installer script if a newer release exists
+
+You can also download the archive directly from the releases page and run
+`install.sh --binary` if you prefer.
+
+### From source
+
+If you’d rather run directly from the repo (handy for development or non-Linux
+hosts), clone the repository and launch `python main.py` directly:
+
+```bash
+git clone https://github.com/ryangerardwilson/o.git
+cd o
+python main.py
+```
+
+---
+
+## Features
 
 - **Vim-style Navigation**:
   - `h` — Go to parent directory (resets filter)
@@ -61,24 +110,11 @@ Operating System" focused purely on efficient file management.
 Perfect for tiling window manager users (Hyprland, sway, etc.) who want a fast,
 modal file browser without leaving the terminal.
 
-## 2. Installation
+---
 
-1. Clone the repo:
+## Usage
 
-   git clone https://github.com/ryangerardwilson/vios.git
-   cd vios
-
-2. Make main.py executable:
-
-    chmod +x main.py
-
-3. Run Vios:
-
-    ./main.py
-
-## 3. Usage
-
-### 3.1. Navigation:
+### Navigation
 
 - j/k: Up/down.
 - h: Parent dir.
@@ -89,26 +125,26 @@ modal file browser without leaving the terminal.
 - Ctrl+H / Ctrl+L: Jump backward/forward through directory history.
 - Esc: Collapse all expansions and return to `~`.
 
-### 3.2. File Operations:
+### File Operations
 
 - yy: Copy.
 - dd: Cut.
 - Backspace: Delete.
 - p: Paste into the selected directory (or alongside the selected file).
 
-### 3.3. Command Mode (i):
+### Command Mode (`i`)
 
 - Type commands like : cp old.txt new.txt.
 - Tab: Auto-complete filenames/dirs.
 - Enter: Run silently.
 - Esc: Exit mode.
 
-### 3.4 Open Terminal: 
+### Open Terminal
 
 - t: Launches Alacritty in current dir.
 - Quit: Esc.
 
-### 3.5 Leader Commands (press `,` first):
+### Leader Commands (press `,` first)
 
 - ,j / ,k: Jump to bottom/top instantly.
 - ,sa / ,sma / ,smd: Sort alphabetically, by modified date ascending, or descending.
@@ -118,12 +154,16 @@ modal file browser without leaving the terminal.
 - ,cp: Copy a `cd` command for the current directory to the system clipboard.
 - ,cl: Clear the multi-item clipboard buffer.
 
-## 4. Requirements
+---
+
+## Requirements
 
 - Python 3.8+
 - Curses (built-in)
 - Optional: Vim, Alacritty
 
-## 5. License
+---
+
+## License
 
 MIT License.
