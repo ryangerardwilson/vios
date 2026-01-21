@@ -238,9 +238,9 @@ class UIRenderer:
                 else:
                     exp_symbol = "  "
 
-                attr = curses.A_REVERSE | curses.A_BOLD if global_idx == self.nav.browser_selected else curses.A_NORMAL
+                attr = curses.A_BOLD if global_idx == self.nav.browser_selected else curses.A_NORMAL
                 if global_idx in visual_indices_set:
-                    attr |= curses.A_UNDERLINE
+                    attr |= curses.A_REVERSE
 
                 suffix = "/" if is_dir else ""
                 indent = "  " * depth
