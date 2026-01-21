@@ -361,7 +361,8 @@ class UIRenderer:
                 if y >= label_row:
                     break
                 offset = int((stream.head - row_offset) % stream.length)
-                ch = chars[offset]
+                char_index = (stream.length - 1 - offset) % stream.length
+                ch = chars[char_index]
                 attr = curses.A_DIM
                 if stream.index == selected_index:
                     attr = curses.A_BOLD if offset == 0 else curses.A_NORMAL
@@ -526,7 +527,8 @@ class UIRenderer:
                 if y >= label_row:
                     break
                 offset = int((stream.head - row_offset) % length)
-                ch = chars[offset]
+                char_index = (length - 1 - offset) % length
+                ch = chars[char_index]
                 attr = curses.A_DIM
                 if offset == int(stream.head % length):
                     attr = curses.A_NORMAL
