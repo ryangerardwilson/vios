@@ -39,6 +39,9 @@ class FileNavigator:
         self.history: List[str] = [start_real]
         self.history_index = 0
 
+        self.bookmarks: List[str] = [start_real]
+        self.bookmark_index = 0
+
     def open_file(self, filepath: str):
         import mimetypes
         import zipfile
@@ -628,6 +631,27 @@ class FileNavigator:
             self.expanded_nodes.discard(entry)
         self.need_redraw = True
 
+    def add_bookmark(self, path: Optional[str] = None) -> bool:
+        target = path or self.dir_manager.current_path
+        if not target:
+            return False
+        real_target = os.path.realpath(target)
+        if not os.path.isdir(real_target):
+            return False
+
+        if real_target in self.bookmarks:
+            self.bookmark_index = self.bookmarks.index(real_target)
+            pretty = DirectoryManager.pretty_path(real_target)
+            self.status_message = f"Bookmark exists: {pretty}"
+        else:
+            self.bookmarks.append(real_target)
+            self.bookmark_index = len(self.bookmarks) - 1
+            pretty = DirectoryManager.pretty_path(real_target)
+            self.status_message = f"Bookmarked {pretty}"
+
+        self.need_redraw = True
+        return True
+
     def change_directory(self, new_path: str, *, record_history: bool = True):
         new_real = os.path.realpath(new_path)
         if not os.path.isdir(new_real):
@@ -645,17 +669,23 @@ class FileNavigator:
         return True
 
     def go_history_back(self):
-        if self.history_index <= 0:
+        if not self.bookmarks:
             return False
-        self.history_index -= 1
-        self._set_current_path(self.history[self.history_index])
+        if self.bookmark_index <= 0:
+            return False
+        self.bookmark_index -= 1
+        self._set_current_path(self.bookmarks[self.bookmark_index])
+        self.status_message = "Bookmark back"
         return True
 
     def go_history_forward(self):
-        if self.history_index >= len(self.history) - 1:
+        if not self.bookmarks:
             return False
-        self.history_index += 1
-        self._set_current_path(self.history[self.history_index])
+        if self.bookmark_index >= len(self.bookmarks) - 1:
+            return False
+        self.bookmark_index += 1
+        self._set_current_path(self.bookmarks[self.bookmark_index])
+        self.status_message = "Bookmark forward"
         return True
 
     def _set_current_path(self, new_path: str):
@@ -663,6 +693,9 @@ class FileNavigator:
         self.browser_selected = 0
         self.list_offset = 0
         self.need_redraw = True
+        real_path = os.path.realpath(new_path)
+        if real_path in self.bookmarks:
+            self.bookmark_index = self.bookmarks.index(real_path)
 
     def reset_to_home(self):
         home = self.dir_manager.home_path

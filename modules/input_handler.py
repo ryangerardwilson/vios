@@ -43,6 +43,10 @@ class InputHandler:
     def _leader_copy_path(self):
         self.nav.copy_current_path()
 
+    def _leader_bookmark(self, context_path):
+        target = context_path or self.nav.dir_manager.current_path
+        self.nav.add_bookmark(target)
+
     def _handle_comma_command(self, key, total: int, selection, context_path, scope_range, target_dir) -> bool:
         ch = self._key_to_char(key)
         if ch is None:
@@ -67,6 +71,7 @@ class InputHandler:
             "nd": lambda: self.nav.create_new_directory(base_dir),
             "rn": lambda: self._leader_rename(selection),
             "cp": self._leader_copy_path,
+            "b": lambda: self._leader_bookmark(context_path),
         }
 
         if command in command_map:

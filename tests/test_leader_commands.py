@@ -1,11 +1,13 @@
 import os
 import sys
 from pathlib import Path
-import time
+
+import pytest  # type: ignore
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from modules.input_handler import InputHandler
+from modules.core_navigator import FileNavigator
 
 
 class DummyClipboard:
@@ -19,7 +21,7 @@ class DummyDirManager:
         self.filter_pattern = ""
         self.sort_mode = "alpha"
         self.sort_map = {}
-        self.home_path = "/home/test"
+        self.home_path = os.path.realpath("/home/test")
 
     def set_sort_mode(self, mode: str):
         self.sort_mode = mode
@@ -46,6 +48,9 @@ class DummyNavigator:
         self.show_help = False
         self.help_scroll = 0
         self.cheatsheet = ""
+        real_current = os.path.realpath(current_path)
+        self.bookmarks = [real_current]
+        self.bookmark_index = 0
 
     def build_display_items(self):
         return list(self.display_items)
@@ -73,6 +78,32 @@ class DummyNavigator:
         self.reset_home_called = True
         self.expanded_nodes.clear()
         self.dir_manager.current_path = os.path.realpath(self.dir_manager.home_path)
+        self.bookmark_index = 0
+
+    def add_bookmark(self, path=None):
+        target = path or self.dir_manager.current_path
+        real = os.path.realpath(target)
+        if real in self.bookmarks:
+            self.bookmark_index = self.bookmarks.index(real)
+            self.status_message = f"Bookmark exists: {real}"
+        else:
+            self.bookmarks.append(real)
+            self.bookmark_index = len(self.bookmarks) - 1
+            self.status_message = f"Bookmarked {real}"
+
+    def go_history_back(self):
+        if self.bookmark_index <= 0:
+            return False
+        self.bookmark_index -= 1
+        self.dir_manager.current_path = self.bookmarks[self.bookmark_index]
+        return True
+
+    def go_history_forward(self):
+        if self.bookmark_index >= len(self.bookmarks) - 1:
+            return False
+        self.bookmark_index += 1
+        self.dir_manager.current_path = self.bookmarks[self.bookmark_index]
+        return True
 def test_scope_detection_for_nested_selection():
     items = [
         ("src", True, "/proj/src", 0),
@@ -239,3 +270,57 @@ def test_double_escape_returns_home_and_clears_expansions():
     assert nav.expanded_nodes == set()
     assert nav.dir_manager.current_path == os.path.realpath(nav.dir_manager.home_path)
     assert nav.status_message == "Returned to ~"
+
+
+def test_bookmark_command_adds_current_path(tmp_path):
+    root = tmp_path
+    sub = root / "sub"
+    sub.mkdir()
+
+    nav = FileNavigator(str(root))
+    handler = nav.input_handler
+
+    nav.change_directory(str(sub))
+    handler.handle_key(None, ord(','))
+    handler.handle_key(None, ord('b'))
+
+    expected = [os.path.realpath(str(root)), os.path.realpath(str(sub))]
+    assert nav.bookmarks == expected
+    assert nav.bookmark_index == 1
+    assert "Bookmarked" in nav.status_message
+
+
+def test_ctrl_navigation_uses_bookmarks(tmp_path):
+    root = tmp_path
+    sub_a = root / "a"
+    sub_b = root / "b"
+    sub_a.mkdir()
+    sub_b.mkdir()
+
+    nav = FileNavigator(str(root))
+    handler = nav.input_handler
+
+    nav.change_directory(str(sub_a))
+    nav.add_bookmark()
+    nav.change_directory(str(sub_b))
+    nav.add_bookmark()
+
+    assert nav.bookmarks == [
+        os.path.realpath(str(root)),
+        os.path.realpath(str(sub_a)),
+        os.path.realpath(str(sub_b)),
+    ]
+
+    assert nav.bookmark_index == 2
+
+    handler.handle_key(None, 8)  # Ctrl+H
+    assert nav.dir_manager.current_path == os.path.realpath(str(sub_a))
+
+    handler.handle_key(None, 8)  # Ctrl+H again
+    assert nav.dir_manager.current_path == os.path.realpath(str(root))
+
+    handler.handle_key(None, 12)  # Ctrl+L
+    assert nav.dir_manager.current_path == os.path.realpath(str(sub_a))
+
+    handler.handle_key(None, 12)  # Ctrl+L again
+    assert nav.dir_manager.current_path == os.path.realpath(str(sub_b))
