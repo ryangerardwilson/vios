@@ -24,7 +24,7 @@ class DirectoryManager:
         if real_path.startswith(real_home):
             if real_path == real_home:
                 return "~"
-            return "~" + real_path[len(real_home):]
+            return "~" + real_path[len(real_home) :]
         return path
 
     def toggle_hidden(self):
@@ -69,7 +69,9 @@ class DirectoryManager:
             visible_items.sort(key=self._alpha_sort_key)
         else:
             reverse = sort_mode == "mtime_desc"
-            visible_items.sort(key=self._mtime_sort_key_factory(target_path), reverse=reverse)
+            visible_items.sort(
+                key=self._mtime_sort_key_factory(target_path), reverse=reverse
+            )
 
         return visible_items
 
@@ -88,7 +90,11 @@ class DirectoryManager:
             return all_items
 
         # Remove leading '/' used for visual feedback
-        search_pattern = self.filter_pattern[1:] if self.filter_pattern.startswith("/") else self.filter_pattern
+        search_pattern = (
+            self.filter_pattern[1:]
+            if self.filter_pattern.startswith("/")
+            else self.filter_pattern
+        )
 
         if not search_pattern:
             return all_items
@@ -97,7 +103,8 @@ class DirectoryManager:
         pattern_lower = normalized.lower()
 
         return [
-            item for item in all_items
+            item
+            for item in all_items
             if fnmatch.fnmatch(item[0].lower(), pattern_lower)
         ]
 
@@ -131,4 +138,5 @@ class DirectoryManager:
             except Exception:
                 mtime = 0
             return (mtime, name.lower())
+
         return sorter

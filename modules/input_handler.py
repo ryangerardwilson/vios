@@ -22,11 +22,15 @@ class InputHandler:
         self.escape_double_threshold = 0.4
 
     def _check_operator_timeout(self):
-        if self.pending_operator and (time.time() - self.operator_timestamp > self.operator_timeout):
+        if self.pending_operator and (
+            time.time() - self.operator_timestamp > self.operator_timeout
+        ):
             self.pending_operator = None
 
     def _check_comma_timeout(self):
-        if self.pending_comma and (time.time() - self.comma_timestamp > self.comma_timeout):
+        if self.pending_comma and (
+            time.time() - self.comma_timestamp > self.comma_timeout
+        ):
             self._reset_comma()
 
     def _flash(self):
@@ -54,7 +58,9 @@ class InputHandler:
         if not self.nav.add_bookmark(target):
             self._flash()
 
-    def _handle_comma_command(self, key, total: int, selection, context_path, scope_range, target_dir) -> bool:
+    def _handle_comma_command(
+        self, key, total: int, selection, context_path, scope_range, target_dir
+    ) -> bool:
         ch = self._key_to_char(key)
         if ch is None:
             self._reset_comma()
@@ -71,8 +77,12 @@ class InputHandler:
             "j": lambda: self._jump_to_scope_edge("down", scope_range, total),
             "k": lambda: self._jump_to_scope_edge("up", scope_range, total),
             "sa": lambda: self._set_sort_mode("alpha", "Sort: Name", context_path),
-            "sma": lambda: self._set_sort_mode("mtime_asc", "Sort: Modified ↑", context_path),
-            "smd": lambda: self._set_sort_mode("mtime_desc", "Sort: Modified ↓", context_path),
+            "sma": lambda: self._set_sort_mode(
+                "mtime_asc", "Sort: Modified ↑", context_path
+            ),
+            "smd": lambda: self._set_sort_mode(
+                "mtime_desc", "Sort: Modified ↓", context_path
+            ),
             "cl": self._clear_clipboard,
             "nf": lambda: self.nav.create_new_file_no_open(base_dir),
             "nd": lambda: self.nav.create_new_directory(base_dir),
@@ -103,7 +113,12 @@ class InputHandler:
     def _jump_to_scope_edge(self, direction: str, scope_range, total: int):
         if scope_range:
             start, end = scope_range
-            if start is not None and end is not None and 0 <= start < total and 0 <= end < total:
+            if (
+                start is not None
+                and end is not None
+                and 0 <= start < total
+                and 0 <= end < total
+            ):
                 target = start if direction == "up" else end
                 self.nav.browser_selected = target
                 return
@@ -193,22 +208,22 @@ class InputHandler:
         self.nav.need_redraw = True
 
     def _handle_help_scroll(self, key, stdscr):
-        lines = len(self.nav.cheatsheet.strip().split('\n'))
+        lines = len(self.nav.cheatsheet.strip().split("\n"))
         max_y = stdscr.getmaxyx()[0] if stdscr else 0
         max_visible = max(1, max_y - 1)
         max_scroll = max(0, lines - max_visible)
 
-        if key == ord('?'):
+        if key == ord("?"):
             self.nav.show_help = False
             self.nav.help_scroll = 0
             self.nav.need_redraw = True
             return True
 
-        if key in (curses.KEY_UP, ord('k')):
+        if key in (curses.KEY_UP, ord("k")):
             self.nav.help_scroll = max(0, self.nav.help_scroll - 1)
             self.nav.need_redraw = True
             return True
-        if key in (curses.KEY_DOWN, ord('j')):
+        if key in (curses.KEY_DOWN, ord("j")):
             self.nav.help_scroll = min(max_scroll, self.nav.help_scroll + 1)
             self.nav.need_redraw = True
             return True
@@ -242,7 +257,7 @@ class InputHandler:
         self._check_comma_timeout()
 
         # === FILTER MODE ===
-        if key == ord('/'):
+        if key == ord("/"):
             if self.in_filter_mode:
                 self.in_filter_mode = False
                 self.nav.dir_manager.filter_pattern = ""
@@ -278,7 +293,9 @@ class InputHandler:
                 return False
             if key in (curses.KEY_BACKSPACE, 127, 8):
                 if len(self.nav.dir_manager.filter_pattern) > 1:
-                    self.nav.dir_manager.filter_pattern = self.nav.dir_manager.filter_pattern[:-1]
+                    self.nav.dir_manager.filter_pattern = (
+                        self.nav.dir_manager.filter_pattern[:-1]
+                    )
                 else:
                     self.in_filter_mode = False
                     self.nav.dir_manager.filter_pattern = ""
@@ -300,7 +317,9 @@ class InputHandler:
             else:
                 current_path = self.nav.dir_manager.current_path
                 self.nav.collapse_expansions_under(current_path)
-                self.nav.status_message = f"Collapsed {os.path.basename(current_path) or current_path}"
+                self.nav.status_message = (
+                    f"Collapsed {os.path.basename(current_path) or current_path}"
+                )
 
             return False
 
@@ -315,13 +334,19 @@ class InputHandler:
         if total == 0:
             self.nav.browser_selected = 0
         else:
-            self.nav.browser_selected = max(0, min(self.nav.browser_selected, total - 1))
+            self.nav.browser_selected = max(
+                0, min(self.nav.browser_selected, total - 1)
+            )
             selection = display_items[self.nav.browser_selected]
             selected_name, selected_is_dir, selected_path, _ = selection
-            target_dir = self._determine_target_directory(selected_path, selected_is_dir)
-            context_path, scope_range = self._compute_context_scope(display_items, self.nav.browser_selected)
+            target_dir = self._determine_target_directory(
+                selected_path, selected_is_dir
+            )
+            context_path, scope_range = self._compute_context_scope(
+                display_items, self.nav.browser_selected
+            )
 
-        if key == ord(','):
+        if key == ord(","):
             self.pending_comma = True
             self.comma_sequence = ""
             self.comma_timestamp = time.time()
@@ -330,7 +355,9 @@ class InputHandler:
             return False
 
         if self.pending_comma:
-            if self._handle_comma_command(key, total, selection, context_path, scope_range, target_dir):
+            if self._handle_comma_command(
+                key, total, selection, context_path, scope_range, target_dir
+            ):
                 return False
 
         if key == 8:  # Ctrl+H
@@ -350,7 +377,7 @@ class InputHandler:
             return False
 
         # === Toggle mark with 'm' — now using full path ===
-        if key == ord('m'):
+        if key == ord("m"):
             if total > 0:
                 full_path = selected_path
                 if full_path in self.nav.marked_items:
@@ -362,26 +389,26 @@ class InputHandler:
             return False
 
         # === CREATE NEW FILE with 'v' ===
-        if key == ord('v'):
+        if key == ord("v"):
             self.nav.create_new_file()
             return False
 
         # === Other single-key commands ===
-        if key == ord('?'):
+        if key == ord("?"):
             self.nav.show_help = True
             self.nav.help_scroll = 0
             return False
 
-        if key == ord('.'):
+        if key == ord("."):
             self.nav.dir_manager.toggle_hidden()
             self.nav.expanded_nodes.clear()
             return False
 
-        if key == ord('t'):
+        if key == ord("t"):
             self.nav.open_terminal()
             return False
 
-        if key == ord('e') and total > 0 and selected_is_dir and selected_path:
+        if key == ord("e") and total > 0 and selected_is_dir and selected_path:
             if selected_path in self.nav.expanded_nodes:
                 self.nav.collapse_branch(selected_path)
                 self.nav.status_message = f"Collapsed {selected_name}"
@@ -393,15 +420,15 @@ class InputHandler:
 
         # === Multi-mark operations ===
         if self.nav.marked_items:
-            if key == ord('p'):
+            if key == ord("p"):
                 self._copy_marked(target_dir)
                 return False
-            if key == ord('x'):
+            if key == ord("x"):
                 self._delete_marked()
                 return False
 
         # === Single-item paste (only when no marks) ===
-        if key == ord('p') and self.nav.clipboard.has_entries:
+        if key == ord("p") and self.nav.clipboard.has_entries:
             try:
                 self.nav.clipboard.paste(target_dir)
                 count = self.nav.clipboard.entry_count
@@ -411,7 +438,7 @@ class InputHandler:
                 self._flash()
             return False
 
-        if key == ord('x') and total > 0 and selected_path:
+        if key == ord("x") and total > 0 and selected_path:
             try:
                 if selected_is_dir:
                     shutil.rmtree(selected_path)
@@ -425,13 +452,15 @@ class InputHandler:
             return False
 
         # === yy / dd operators ===
-        if self.pending_operator == 'd' and key == ord('d'):
+        if self.pending_operator == "d" and key == ord("d"):
             handled = False
             if self.nav.marked_items:
                 handled = self._stage_marked_to_clipboard(cut=True)
             elif total > 0:
                 try:
-                    self.nav.clipboard.yank(selected_path, selected_name, selected_is_dir, cut=True)
+                    self.nav.clipboard.yank(
+                        selected_path, selected_name, selected_is_dir, cut=True
+                    )
                     handled = True
                 except Exception:
                     self._flash()
@@ -439,13 +468,15 @@ class InputHandler:
             if handled:
                 return False
 
-        if self.pending_operator == 'y' and key == ord('y'):
+        if self.pending_operator == "y" and key == ord("y"):
             handled = False
             if self.nav.marked_items:
                 handled = self._stage_marked_to_clipboard(cut=False)
             elif total > 0:
                 try:
-                    self.nav.clipboard.yank(selected_path, selected_name, selected_is_dir, cut=False)
+                    self.nav.clipboard.yank(
+                        selected_path, selected_name, selected_is_dir, cut=False
+                    )
                     handled = True
                 except Exception:
                     self._flash()
@@ -453,13 +484,13 @@ class InputHandler:
             if handled:
                 return False
 
-        if key == ord('d'):
-            self.pending_operator = 'd'
+        if key == ord("d"):
+            self.pending_operator = "d"
             self.operator_timestamp = time.time()
             return False
 
-        if key == ord('y'):
-            self.pending_operator = 'y'
+        if key == ord("y"):
+            self.pending_operator = "y"
             self.operator_timestamp = time.time()
             return False
 
@@ -467,23 +498,25 @@ class InputHandler:
             self.pending_operator = None
 
         # === Navigation ===
-        if key in (curses.KEY_UP, ord('k')) and total > 0:
+        if key in (curses.KEY_UP, ord("k")) and total > 0:
             self.nav.browser_selected = (self.nav.browser_selected - 1) % total
-        elif key in (curses.KEY_DOWN, ord('j')) and total > 0:
+        elif key in (curses.KEY_DOWN, ord("j")) and total > 0:
             self.nav.browser_selected = (self.nav.browser_selected + 1) % total
         elif key in (curses.KEY_SR, 11):  # Ctrl+K
             jump = max(1, total // 10) if total > 0 else 0
             self.nav.browser_selected = max(0, self.nav.browser_selected - jump)
         elif key in (curses.KEY_SF, 10):  # Ctrl+J
             jump = max(1, total // 10) if total > 0 else 0
-            self.nav.browser_selected = min(total - 1, self.nav.browser_selected + jump) if total > 0 else 0
-        elif key in (curses.KEY_LEFT, ord('h')):
+            self.nav.browser_selected = (
+                min(total - 1, self.nav.browser_selected + jump) if total > 0 else 0
+            )
+        elif key in (curses.KEY_LEFT, ord("h")):
             parent = os.path.dirname(self.nav.dir_manager.current_path)
             if parent != self.nav.dir_manager.current_path:
                 if self.nav.change_directory(parent):
                     self.in_filter_mode = False
                     self.nav.dir_manager.filter_pattern = ""
-        elif key in (curses.KEY_RIGHT, ord('l'), 10, 13) and total > 0:
+        elif key in (curses.KEY_RIGHT, ord("l"), 10, 13) and total > 0:
             if selected_is_dir:
                 if self.nav.change_directory(selected_path):
                     self.in_filter_mode = False

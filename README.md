@@ -2,12 +2,12 @@
 
 *A minimal, Vim-inspired file navigator for your terminal.*
 
-Vios is a lightweight, hjkl-powered directory browser that feels like Vim for 
-filesystem navigation. Navigate directories, open files in your preferred 
-editor, create new files, yank/cut/paste, and launch terminals — all from a 
+Vios is a lightweight, hjkl-powered directory browser that feels like Vim for
+filesystem navigation. Navigate directories, open files in your preferred
+editor, create new files, yank/cut/paste, and launch terminals — all from a
 clean, fast curses interface.
 
-Built with Python and curses, Vios turns your terminal into a "Vi-like 
+Built with Python and curses, Vios turns your terminal into a "Vi-like
 Operating System" focused purely on efficient file management.
 
 ## 1. Features

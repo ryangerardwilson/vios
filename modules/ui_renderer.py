@@ -24,21 +24,26 @@ class UIRenderer:
                 pass
 
         if self.nav.show_help:
-            lines = [line.rstrip() for line in self.nav.cheatsheet.strip().split('\n')]
+            lines = [line.rstrip() for line in self.nav.cheatsheet.strip().split("\n")]
             total_lines = len(lines)
             max_visible = max(1, max_y - 1)
             start = max(0, min(self.nav.help_scroll, max(0, total_lines - max_visible)))
-            visible = lines[start:start + max_visible]
+            visible = lines[start : start + max_visible]
             for i, line in enumerate(visible):
                 try:
                     stdscr.addstr(i, 0, line[:max_x])
                 except curses.error:
                     pass
-            status = f"HELP {start+1}-{start+len(visible)} / {total_lines}"
+            status = f"HELP {start + 1}-{start + len(visible)} / {total_lines}"
             try:
                 stdscr.move(max_y - 1, 0)
                 stdscr.clrtoeol()
-                stdscr.addstr(max_y - 1, 0, status[:max_x-1], curses.color_pair(5) | curses.A_BOLD)
+                stdscr.addstr(
+                    max_y - 1,
+                    0,
+                    status[: max_x - 1],
+                    curses.color_pair(5) | curses.A_BOLD,
+                )
             except curses.error:
                 pass
             stdscr.refresh()
@@ -46,7 +51,9 @@ class UIRenderer:
 
         display_path = DirectoryManager.pretty_path(self.nav.dir_manager.current_path)
         try:
-            stdscr.addstr(0, 0, display_path[:max_x], curses.color_pair(2) | curses.A_BOLD)
+            stdscr.addstr(
+                0, 0, display_path[:max_x], curses.color_pair(2) | curses.A_BOLD
+            )
         except curses.error:
             pass
 
@@ -73,23 +80,39 @@ class UIRenderer:
         total = len(items)
 
         if total > 0:
-            if (self.nav.browser_selected >= self.nav.list_offset + available_height or
-                self.nav.browser_selected < self.nav.list_offset):
+            if (
+                self.nav.browser_selected >= self.nav.list_offset + available_height
+                or self.nav.browser_selected < self.nav.list_offset
+            ):
                 if self.nav.browser_selected < self.nav.list_offset:
                     self.nav.list_offset = self.nav.browser_selected
                 else:
-                    self.nav.list_offset = self.nav.browser_selected - available_height + 1
-            self.nav.list_offset = max(0, min(self.nav.list_offset, max(0, total - available_height)))
+                    self.nav.list_offset = (
+                        self.nav.browser_selected - available_height + 1
+                    )
+            self.nav.list_offset = max(
+                0, min(self.nav.list_offset, max(0, total - available_height))
+            )
         else:
             self.nav.list_offset = 0
 
-        visible_items = items[self.nav.list_offset:self.nav.list_offset + available_height]
+        visible_items = items[
+            self.nav.list_offset : self.nav.list_offset + available_height
+        ]
 
         if total == 0:
-            msg = "(no matches)" if self.nav.dir_manager.filter_pattern else "(empty directory)"
+            msg = (
+                "(no matches)"
+                if self.nav.dir_manager.filter_pattern
+                else "(empty directory)"
+            )
             try:
-                stdscr.addstr(list_start_y + available_height // 2,
-                              max(0, (max_x - len(msg)) // 2), msg, curses.color_pair(3))
+                stdscr.addstr(
+                    list_start_y + available_height // 2,
+                    max(0, (max_x - len(msg)) // 2),
+                    msg,
+                    curses.color_pair(3),
+                )
             except curses.error:
                 pass
         else:
@@ -97,7 +120,7 @@ class UIRenderer:
                 global_idx = self.nav.list_offset + i
 
                 arrow = ">" if global_idx == self.nav.browser_selected else " "
-                mark  = "✓" if full_path in self.nav.marked_items else " "
+                mark = "✓" if full_path in self.nav.marked_items else " "
                 sel_block = f"{arrow}{mark} "
 
                 if is_dir:
@@ -105,9 +128,12 @@ class UIRenderer:
                 else:
                     exp_symbol = "  "
 
-                color = (curses.color_pair(1) | curses.A_BOLD
-                         if global_idx == self.nav.browser_selected else curses.color_pair(2))
-                suffix = '/' if is_dir else ''
+                color = (
+                    curses.color_pair(1) | curses.A_BOLD
+                    if global_idx == self.nav.browser_selected
+                    else curses.color_pair(2)
+                )
+                suffix = "/" if is_dir else ""
                 indent = "  " * depth
                 line = f"{indent}{sel_block}{exp_symbol}{name}{suffix}"
 
@@ -143,7 +169,9 @@ class UIRenderer:
             bottom = min(total, self.nav.list_offset + available_height)
             scroll_indicator = f"  [{top}-{bottom}/{total}]"
 
-        mark_text = f"  MARKED: {len(self.nav.marked_items)}" if self.nav.marked_items else ""
+        mark_text = (
+            f"  MARKED: {len(self.nav.marked_items)}" if self.nav.marked_items else ""
+        )
         message_text = f"  {self.nav.status_message}" if self.nav.status_message else ""
 
         status = f"{help_hint}{filter_text}{leader_text}{hidden_indicator}{scroll_indicator}{yank_text}{mark_text}{message_text}"
@@ -151,7 +179,9 @@ class UIRenderer:
         try:
             stdscr.move(max_y - 1, 0)
             stdscr.clrtoeol()
-            stdscr.addstr(max_y - 1, 0, status[:max_x-1], curses.color_pair(5) | curses.A_BOLD)
+            stdscr.addstr(
+                max_y - 1, 0, status[: max_x - 1], curses.color_pair(5) | curses.A_BOLD
+            )
         except curses.error:
             pass
 

@@ -2,7 +2,6 @@ import os
 import sys
 from pathlib import Path
 
-import pytest  # type: ignore
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
@@ -69,7 +68,9 @@ class DummyNavigator:
     def collapse_expansions_under(self, base_path):
         real = os.path.realpath(base_path)
         prefix = f"{real}{os.sep}"
-        to_remove = {p for p in self.expanded_nodes if p == real or p.startswith(prefix)}
+        to_remove = {
+            p for p in self.expanded_nodes if p == real or p.startswith(prefix)
+        }
         self.expanded_nodes.difference_update(to_remove)
         self.collapsed_paths.append(real)
 
@@ -79,7 +80,9 @@ class DummyNavigator:
         self.dir_manager.current_path = os.path.realpath(self.dir_manager.home_path)
         if self.bookmarks:
             try:
-                self.bookmark_index = self.bookmarks.index(self.dir_manager.current_path)
+                self.bookmark_index = self.bookmarks.index(
+                    self.dir_manager.current_path
+                )
             except ValueError:
                 self.bookmark_index = -1
         else:
@@ -109,6 +112,8 @@ class DummyNavigator:
         self.bookmark_index += 1
         self.dir_manager.current_path = self.bookmarks[self.bookmark_index]
         return True
+
+
 def test_scope_detection_for_nested_selection():
     items = [
         ("src", True, "/proj/src", 0),
@@ -123,7 +128,9 @@ def test_scope_detection_for_nested_selection():
     handler = InputHandler(nav)
 
     nav.browser_selected = 3
-    context_path, scope_range = handler._compute_context_scope(items, nav.browser_selected)
+    context_path, scope_range = handler._compute_context_scope(
+        items, nav.browser_selected
+    )
 
     assert context_path is not None
     assert context_path == os.path.realpath("/proj/src/foo")
@@ -144,19 +151,30 @@ def test_jump_commands_stay_within_scope():
     handler = InputHandler(nav)
 
     nav.browser_selected = 3
-    context_path, scope_range = handler._compute_context_scope(items, nav.browser_selected)
+    context_path, scope_range = handler._compute_context_scope(
+        items, nav.browser_selected
+    )
     selection = items[nav.browser_selected]
 
     handler.comma_sequence = ""
     assert context_path is not None
     handler.pending_comma = True
-    handler._handle_comma_command(ord('k'), len(items), selection, context_path, scope_range, "/proj/src/foo")
+    handler._handle_comma_command(
+        ord("k"), len(items), selection, context_path, scope_range, "/proj/src/foo"
+    )
     assert nav.browser_selected == 2
 
     nav.browser_selected = 2
     handler.pending_comma = True
     handler.comma_sequence = ""
-    handler._handle_comma_command(ord('j'), len(items), items[nav.browser_selected], context_path, scope_range, "/proj/src/foo")
+    handler._handle_comma_command(
+        ord("j"),
+        len(items),
+        items[nav.browser_selected],
+        context_path,
+        scope_range,
+        "/proj/src/foo",
+    )
     assert nav.browser_selected == 3
 
 
@@ -173,15 +191,21 @@ def test_sorting_scoped_to_expanded_directory():
     handler = InputHandler(nav)
 
     nav.browser_selected = 2
-    context_path, scope_range = handler._compute_context_scope(items, nav.browser_selected)
+    context_path, scope_range = handler._compute_context_scope(
+        items, nav.browser_selected
+    )
     selection = items[nav.browser_selected]
 
     handler.pending_comma = True
     handler.comma_sequence = ""
-    handler._handle_comma_command(ord('s'), len(items), selection, context_path, scope_range, "/proj/src/foo")
+    handler._handle_comma_command(
+        ord("s"), len(items), selection, context_path, scope_range, "/proj/src/foo"
+    )
     handler.pending_comma = True
     handler.comma_sequence = "s"
-    handler._handle_comma_command(ord('a'), len(items), selection, context_path, scope_range, "/proj/src/foo")
+    handler._handle_comma_command(
+        ord("a"), len(items), selection, context_path, scope_range, "/proj/src/foo"
+    )
 
     assert context_path is not None
     key = os.path.realpath(context_path)
@@ -201,7 +225,9 @@ def test_creation_commands_use_context_directory():
     handler = InputHandler(nav)
 
     nav.browser_selected = 2
-    context_path, scope_range = handler._compute_context_scope(items, nav.browser_selected)
+    context_path, scope_range = handler._compute_context_scope(
+        items, nav.browser_selected
+    )
     selection = items[nav.browser_selected]
 
     target_dir = os.path.dirname(selection[2])
@@ -209,17 +235,25 @@ def test_creation_commands_use_context_directory():
     assert context_path is not None
     handler.pending_comma = True
     handler.comma_sequence = ""
-    handler._handle_comma_command(ord('n'), len(items), selection, context_path, scope_range, target_dir)
+    handler._handle_comma_command(
+        ord("n"), len(items), selection, context_path, scope_range, target_dir
+    )
     handler.pending_comma = True
     handler.comma_sequence = "n"
-    handler._handle_comma_command(ord('f'), len(items), selection, context_path, scope_range, target_dir)
+    handler._handle_comma_command(
+        ord("f"), len(items), selection, context_path, scope_range, target_dir
+    )
 
     handler.pending_comma = True
     handler.comma_sequence = ""
-    handler._handle_comma_command(ord('n'), len(items), selection, context_path, scope_range, target_dir)
+    handler._handle_comma_command(
+        ord("n"), len(items), selection, context_path, scope_range, target_dir
+    )
     handler.pending_comma = True
     handler.comma_sequence = "n"
-    handler._handle_comma_command(ord('d'), len(items), selection, context_path, scope_range, target_dir)
+    handler._handle_comma_command(
+        ord("d"), len(items), selection, context_path, scope_range, target_dir
+    )
 
     assert nav.create_calls == [
         ("file", os.path.realpath(context_path)),
@@ -236,16 +270,22 @@ def test_creation_falls_back_to_current_directory_when_no_context():
     handler = InputHandler(nav)
 
     nav.browser_selected = 0
-    context_path, scope_range = handler._compute_context_scope(items, nav.browser_selected)
+    context_path, scope_range = handler._compute_context_scope(
+        items, nav.browser_selected
+    )
     selection = items[0]
     target_dir = os.path.dirname(selection[2])
 
     handler.pending_comma = True
     handler.comma_sequence = ""
-    handler._handle_comma_command(ord('n'), len(items), selection, context_path, scope_range, target_dir)
+    handler._handle_comma_command(
+        ord("n"), len(items), selection, context_path, scope_range, target_dir
+    )
     handler.pending_comma = True
     handler.comma_sequence = "n"
-    handler._handle_comma_command(ord('f'), len(items), selection, context_path, scope_range, target_dir)
+    handler._handle_comma_command(
+        ord("f"), len(items), selection, context_path, scope_range, target_dir
+    )
 
     assert nav.create_calls == [("file", os.path.realpath(target_dir))]
 
@@ -286,16 +326,16 @@ def test_bookmark_command_adds_current_path(tmp_path):
     handler = nav.input_handler
 
     nav.change_directory(str(sub))
-    handler.handle_key(None, ord(','))
-    handler.handle_key(None, ord('b'))
+    handler.handle_key(None, ord(","))
+    handler.handle_key(None, ord("b"))
 
     expected = [os.path.realpath(str(sub))]
     assert nav.bookmarks == expected
     assert nav.bookmark_index == 0
     assert "Bookmarked" in nav.status_message
 
-    handler.handle_key(None, ord(','))
-    handler.handle_key(None, ord('b'))
+    handler.handle_key(None, ord(","))
+    handler.handle_key(None, ord("b"))
 
     assert nav.bookmarks == []
     assert nav.bookmark_index == -1
@@ -356,18 +396,24 @@ def test_bookmark_command_ignores_expanded_context(tmp_path):
     nav = FileNavigator(str(root))
     handler = nav.input_handler
 
-    nav.expanded_nodes.update({
-        os.path.realpath(str(parent)),
-        os.path.realpath(str(child)),
-    })
+    nav.expanded_nodes.update(
+        {
+            os.path.realpath(str(parent)),
+            os.path.realpath(str(child)),
+        }
+    )
 
     items = nav.build_display_items()
     target_path = os.path.realpath(str(inner_file))
-    target_index = next(i for i, (_, _, path, _) in enumerate(items) if os.path.realpath(path) == target_path)
+    target_index = next(
+        i
+        for i, (_, _, path, _) in enumerate(items)
+        if os.path.realpath(path) == target_path
+    )
     nav.browser_selected = target_index
 
-    handler.handle_key(None, ord(','))
-    handler.handle_key(None, ord('b'))
+    handler.handle_key(None, ord(","))
+    handler.handle_key(None, ord("b"))
 
     expected = [os.path.realpath(str(root))]
     assert nav.bookmarks == expected

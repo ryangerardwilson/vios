@@ -7,6 +7,7 @@ from modules.core_navigator import FileNavigator
 
 os.environ.setdefault("ESCDELAY", "25")
 
+
 def main(stdscr):
     start_path = os.getcwd()
     navigator = FileNavigator(start_path)

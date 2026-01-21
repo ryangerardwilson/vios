@@ -2,7 +2,6 @@
 import curses
 import subprocess
 import os
-import sys
 import shutil
 import shlex
 from typing import Any, Set, cast, List, Optional
@@ -46,7 +45,7 @@ class FileNavigator:
         import mimetypes
         import zipfile
 
-        if filepath.endswith('.zip'):
+        if filepath.endswith(".zip"):
             stdscr_opt = self.renderer.stdscr
             if stdscr_opt is None:
                 curses.flash()
@@ -63,7 +62,7 @@ class FileNavigator:
                 status = f"Unzipping {filename} in progress..."
                 stdscr.move(max_y - 1, 0)
                 stdscr.clrtoeol()
-                stdscr.addstr(max_y - 1, 0, status[:max_x-1], curses.A_BOLD)
+                stdscr.addstr(max_y - 1, 0, status[: max_x - 1], curses.A_BOLD)
                 stdscr.refresh()
 
                 with zipfile.ZipFile(filepath) as zf:
@@ -72,10 +71,12 @@ class FileNavigator:
                     for i, member in enumerate(members):
                         zf.extract(member, extract_dir)
                         if (i + 1) % 10 == 0 or i + 1 == total:
-                            status = f"Unzipping {filename}: {i+1}/{total}"
+                            status = f"Unzipping {filename}: {i + 1}/{total}"
                             stdscr.move(max_y - 1, 0)
                             stdscr.clrtoeol()
-                            stdscr.addstr(max_y - 1, 0, status[:max_x-1], curses.A_BOLD)
+                            stdscr.addstr(
+                                max_y - 1, 0, status[: max_x - 1], curses.A_BOLD
+                            )
                             stdscr.refresh()
             except Exception:
                 curses.flash()
@@ -88,35 +89,28 @@ class FileNavigator:
         curses.endwin()
 
         try:
-            if ext in ('.csv', '.parquet'):
-                subprocess.call([
-                    "vixl",
-                    filepath
-                ])
-            elif mime_type == 'application/pdf':
-                subprocess.Popen([
-                    "zathura", filepath
-                ],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                stdin=subprocess.DEVNULL,
-                preexec_fn=os.setsid
+            if ext in (".csv", ".parquet"):
+                subprocess.call(["vixl", filepath])
+            elif mime_type == "application/pdf":
+                subprocess.Popen(
+                    ["zathura", filepath],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    stdin=subprocess.DEVNULL,
+                    preexec_fn=os.setsid,
                 )
-            elif mime_type and mime_type.startswith('image/'):
-                subprocess.Popen([
-                    "swayimg", filepath
-                ],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                stdin=subprocess.DEVNULL,
-                preexec_fn=os.setsid
+            elif mime_type and mime_type.startswith("image/"):
+                subprocess.Popen(
+                    ["swayimg", filepath],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    stdin=subprocess.DEVNULL,
+                    preexec_fn=os.setsid,
                 )
             else:
-                subprocess.call([
-                    "vim",
-                    "-c", f"cd {self.dir_manager.current_path}",
-                    filepath
-                ])
+                subprocess.call(
+                    ["vim", "-c", f"cd {self.dir_manager.current_path}", filepath]
+                )
         except FileNotFoundError:
             pass
         finally:
@@ -125,14 +119,14 @@ class FileNavigator:
     def copy_current_path(self):
         current_dir = self.dir_manager.current_path
         text_to_copy = f'cd "{current_dir}"'
-        
+
         try:
             p = subprocess.Popen(
                 ["wl-copy"],
                 stdin=subprocess.PIPE,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                preexec_fn=os.setsid
+                preexec_fn=os.setsid,
             )
             stdin_pipe = p.stdin
             if stdin_pipe:
@@ -165,7 +159,7 @@ class FileNavigator:
         stdscr.clrtoeol()
 
         try:
-            stdscr.addstr(prompt_y, 0, prompt[:max_x-1])
+            stdscr.addstr(prompt_y, 0, prompt[: max_x - 1])
         except curses.error:
             pass
 
@@ -206,7 +200,7 @@ class FileNavigator:
                 stdscr.move(prompt_y, 0)
                 stdscr.clrtoeol()
                 display_str = prompt + input_str
-                stdscr.addstr(prompt_y, 0, display_str[:max_x-1])
+                stdscr.addstr(prompt_y, 0, display_str[: max_x - 1])
                 stdscr.refresh()
 
             filename = input_str.strip()
@@ -221,15 +215,22 @@ class FileNavigator:
         if not filename:
             return
 
-        unique_name = self.input_handler._get_unique_name(self.dir_manager.current_path, filename)
+        unique_name = self.input_handler._get_unique_name(
+            self.dir_manager.current_path, filename
+        )
         filepath = os.path.join(self.dir_manager.current_path, unique_name)
 
         try:
-            with open(filepath, 'w'):
+            with open(filepath, "w"):
                 pass
             os.utime(filepath, None)
         except Exception as e:
-            stdscr.addstr(prompt_y, 0, f"Error creating file: {str(e)[:max_x-20]}", curses.A_BOLD)
+            stdscr.addstr(
+                prompt_y,
+                0,
+                f"Error creating file: {str(e)[: max_x - 20]}",
+                curses.A_BOLD,
+            )
             stdscr.clrtoeol()
             stdscr.refresh()
             stdscr.getch()
@@ -244,14 +245,19 @@ class FileNavigator:
         term_env = os.environ.get("TERMINAL")
         if term_env:
             commands.append(shlex.split(term_env))
-        commands.extend([[cmd] for cmd in (
-            "alacritty",
-            "foot",
-            "kitty",
-            "wezterm",
-            "gnome-terminal",
-            "xterm"
-        )])
+        commands.extend(
+            [
+                [cmd]
+                for cmd in (
+                    "alacritty",
+                    "foot",
+                    "kitty",
+                    "wezterm",
+                    "gnome-terminal",
+                    "xterm",
+                )
+            ]
+        )
 
         for cmd in commands:
             if not cmd:
@@ -265,7 +271,7 @@ class FileNavigator:
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                     stdin=subprocess.DEVNULL,
-                    preexec_fn=os.setsid
+                    preexec_fn=os.setsid,
                 )
                 self.status_message = f"Opened terminal: {cmd[0]}"
                 return
@@ -301,7 +307,7 @@ class FileNavigator:
         stdscr.clrtoeol()
 
         try:
-            stdscr.addstr(prompt_y, 0, prompt[:max_x-1])
+            stdscr.addstr(prompt_y, 0, prompt[: max_x - 1])
         except curses.error:
             pass
 
@@ -342,7 +348,7 @@ class FileNavigator:
                 stdscr.move(prompt_y, 0)
                 stdscr.clrtoeol()
                 display_str = prompt + input_str
-                stdscr.addstr(prompt_y, 0, display_str[:max_x-1])
+                stdscr.addstr(prompt_y, 0, display_str[: max_x - 1])
                 stdscr.refresh()
 
             filename = input_str.strip()
@@ -362,11 +368,16 @@ class FileNavigator:
         filepath = os.path.join(base_dir, unique_name)
 
         try:
-            with open(filepath, 'w'):
+            with open(filepath, "w"):
                 pass
             os.utime(filepath, None)
         except Exception as e:
-            stdscr.addstr(prompt_y, 0, f"Error creating file: {str(e)[:max_x-20]}", curses.A_BOLD)
+            stdscr.addstr(
+                prompt_y,
+                0,
+                f"Error creating file: {str(e)[: max_x - 20]}",
+                curses.A_BOLD,
+            )
             stdscr.clrtoeol()
             stdscr.refresh()
             stdscr.getch()
@@ -391,7 +402,7 @@ class FileNavigator:
         stdscr.clrtoeol()
 
         try:
-            stdscr.addstr(prompt_y, 0, prompt[:max_x-1])
+            stdscr.addstr(prompt_y, 0, prompt[: max_x - 1])
         except curses.error:
             pass
 
@@ -432,7 +443,7 @@ class FileNavigator:
                 stdscr.move(prompt_y, 0)
                 stdscr.clrtoeol()
                 display_str = prompt + input_str
-                stdscr.addstr(prompt_y, 0, display_str[:max_x-1])
+                stdscr.addstr(prompt_y, 0, display_str[: max_x - 1])
                 stdscr.refresh()
 
             dirname = input_str.strip()
@@ -454,7 +465,12 @@ class FileNavigator:
         try:
             os.makedirs(dirpath)
         except Exception as e:
-            stdscr.addstr(prompt_y, 0, f"Error creating dir: {str(e)[:max_x-20]}", curses.A_BOLD)
+            stdscr.addstr(
+                prompt_y,
+                0,
+                f"Error creating dir: {str(e)[: max_x - 20]}",
+                curses.A_BOLD,
+            )
             stdscr.clrtoeol()
             stdscr.refresh()
             stdscr.getch()
@@ -487,7 +503,7 @@ class FileNavigator:
         stdscr.clrtoeol()
 
         try:
-            stdscr.addstr(prompt_y, 0, prompt[:max_x-1])
+            stdscr.addstr(prompt_y, 0, prompt[: max_x - 1])
         except curses.error:
             pass
 
@@ -528,7 +544,7 @@ class FileNavigator:
                 stdscr.move(prompt_y, 0)
                 stdscr.clrtoeol()
                 display_str = prompt + input_str
-                stdscr.addstr(prompt_y, 0, display_str[:max_x-1])
+                stdscr.addstr(prompt_y, 0, display_str[: max_x - 1])
                 stdscr.refresh()
 
             new_name = input_str.strip()
@@ -549,7 +565,9 @@ class FileNavigator:
         try:
             os.rename(selected_path, new_path)
         except Exception as e:
-            stdscr.addstr(prompt_y, 0, f"Error renaming: {str(e)[:max_x-20]}", curses.A_BOLD)
+            stdscr.addstr(
+                prompt_y, 0, f"Error renaming: {str(e)[: max_x - 20]}", curses.A_BOLD
+            )
             stdscr.clrtoeol()
             stdscr.refresh()
             stdscr.getch()
@@ -560,8 +578,17 @@ class FileNavigator:
         curses.start_color()
         curses.use_default_colors()
         for i in range(1, 6):
-            curses.init_pair(i, [curses.COLOR_CYAN, curses.COLOR_WHITE, curses.COLOR_YELLOW,
-                                 curses.COLOR_RED, curses.COLOR_GREEN][i-1], -1)
+            curses.init_pair(
+                i,
+                [
+                    curses.COLOR_CYAN,
+                    curses.COLOR_WHITE,
+                    curses.COLOR_YELLOW,
+                    curses.COLOR_RED,
+                    curses.COLOR_GREEN,
+                ][i - 1],
+                -1,
+            )
 
         self.renderer.stdscr = stdscr
 
@@ -602,7 +629,11 @@ class FileNavigator:
 
     def _append_expanded(self, base_path: str, depth: int, collection: list):
         children = self.dir_manager.list_directory(base_path)
-        if not children and base_path in self.expanded_nodes and not os.path.exists(base_path):
+        if (
+            not children
+            and base_path in self.expanded_nodes
+            and not os.path.exists(base_path)
+        ):
             self.expanded_nodes.discard(base_path)
             return
 
@@ -613,9 +644,15 @@ class FileNavigator:
                 self._append_expanded(child_path, depth + 1, collection)
 
     def collapse_branch(self, base_path: str):
-        if base_path not in self.expanded_nodes and not any(p.startswith(f"{base_path}{os.sep}") for p in self.expanded_nodes):
+        if base_path not in self.expanded_nodes and not any(
+            p.startswith(f"{base_path}{os.sep}") for p in self.expanded_nodes
+        ):
             return
-        to_remove = [p for p in self.expanded_nodes if p == base_path or p.startswith(f"{base_path}{os.sep}")]
+        to_remove = [
+            p
+            for p in self.expanded_nodes
+            if p == base_path or p.startswith(f"{base_path}{os.sep}")
+        ]
         for entry in to_remove:
             self.expanded_nodes.discard(entry)
 
@@ -624,7 +661,9 @@ class FileNavigator:
         if not real_base:
             return
         prefix = f"{real_base}{os.sep}"
-        to_remove = [p for p in self.expanded_nodes if p == real_base or p.startswith(prefix)]
+        to_remove = [
+            p for p in self.expanded_nodes if p == real_base or p.startswith(prefix)
+        ]
         if not to_remove:
             return
         for entry in to_remove:
@@ -667,7 +706,7 @@ class FileNavigator:
 
         if record_history:
             if self.history_index < len(self.history) - 1:
-                self.history = self.history[:self.history_index + 1]
+                self.history = self.history[: self.history_index + 1]
             if not self.history or self.history[-1] != new_real:
                 self.history.append(new_real)
                 self.history_index = len(self.history) - 1
