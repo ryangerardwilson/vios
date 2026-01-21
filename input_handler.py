@@ -611,10 +611,12 @@ class InputHandler:
                             self.nav.discard_matrix_position(previous_path)
                     elif selected_path:
                         self.nav.open_file(selected_path)
+                    elif total == 0:
+                        self._flash()
                     return False
                 if key == ord("k"):
                     parent = os.path.dirname(self.nav.dir_manager.current_path)
-                    if parent != self.nav.dir_manager.current_path:
+                    if parent and parent != self.nav.dir_manager.current_path:
                         if self.nav.change_directory(parent):
                             self.in_filter_mode = False
                             self.nav.dir_manager.filter_pattern = ""
@@ -630,7 +632,7 @@ class InputHandler:
                     return False
                 if key == ord("h"):
                     parent = os.path.dirname(self.nav.dir_manager.current_path)
-                    if parent != self.nav.dir_manager.current_path:
+                    if parent and parent != self.nav.dir_manager.current_path:
                         if self.nav.change_directory(parent):
                             self.in_filter_mode = False
                             self.nav.dir_manager.filter_pattern = ""
@@ -644,6 +646,8 @@ class InputHandler:
                             self.nav.exit_visual_mode()
                     elif selected_path:
                         self.nav.open_file(selected_path)
+                    elif total == 0:
+                        self._flash()
                     return False
 
         if key == curses.KEY_UP and total > 0:
@@ -656,7 +660,7 @@ class InputHandler:
             self._jump_selection(total, "down")
         elif key == curses.KEY_LEFT:
             parent = os.path.dirname(self.nav.dir_manager.current_path)
-            if parent != self.nav.dir_manager.current_path:
+            if parent and parent != self.nav.dir_manager.current_path:
                 if self.nav.change_directory(parent):
                     self.in_filter_mode = False
                     self.nav.dir_manager.filter_pattern = ""
@@ -782,6 +786,9 @@ class InputHandler:
             parent = os.path.dirname(selected_path)
             if parent:
                 return parent
+        parent = os.path.dirname(self.nav.dir_manager.current_path)
+        if parent:
+            return parent
         return self.nav.dir_manager.current_path
 
     def _get_unique_name(self, dest_dir: str, base_name: str) -> str:

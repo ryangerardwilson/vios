@@ -35,10 +35,27 @@ class MatrixState:
     index_map: dict[int, MatrixStream]
 
 
+@dataclass
+class IdleStream:
+    column: int
+    velocity: float
+    head: float
+    chars: str
+
+
+@dataclass
+class IdleMatrixState:
+    streams: list[IdleStream]
+    max_height: int
+    max_width: int
+    last_update: float
+
+
 class UIRenderer:
     def __init__(self, navigator):
         self.nav = navigator
         self.stdscr: Optional[Any] = None
+        self._idle_matrix_state: Optional[IdleMatrixState] = None
 
     def render(self):
         stdscr = self.stdscr
@@ -77,7 +94,7 @@ class UIRenderer:
 
     def _render_path_header(self, stdscr: Any, display_path: str, max_x: int) -> None:
         try:
-            stdscr.addstr(0, 0, display_path[:max_x], curses.A_BOLD)
+            stdscr.addstr(0, 0, display_path[:max_x])
         except curses.error:
             pass
         try:
@@ -285,20 +302,7 @@ class UIRenderer:
             except curses.error:
                 pass
             status = self._compose_status(mode_indicator="[Matrix]")
-            self._render_status_bar(stdscr, status, max_y, max_x)
-            return
-
-        items = self.nav.build_display_items()
-        total = len(items)
-
-        if total == 0:
-            msg = "(nothing to rain)"
-            try:
-                stdscr.addstr(content_start_y, max(0, (max_x - len(msg)) // 2), msg)
-            except curses.error:
-                pass
-            status = self._compose_status(mode_indicator="[Matrix]")
-            self._render_status_bar(stdscr, status, max_y, max_x)
+            self._render_status_bar(stdscr, status, max_y, max_x, bold=False)
             return
 
         matrix_height = max(1, available_rows - 1)
@@ -308,6 +312,18 @@ class UIRenderer:
                 stdscr.clrtoeol()
             except curses.error:
                 pass
+
+        items = self.nav.build_display_items()
+        total = len(items)
+
+        if total == 0:
+            self.nav.matrix_state = None
+            self._render_idle_matrix(stdscr, content_start_y, label_row, matrix_height, max_x)
+            status = self._compose_status(mode_indicator="[Matrix]")
+            self._render_status_bar(stdscr, status, max_y, max_x, bold=False)
+            return
+
+        self._idle_matrix_state = None
         state = self._ensure_matrix_state(items, matrix_height, max_x)
 
         now = time.monotonic()
@@ -365,7 +381,7 @@ class UIRenderer:
                 stdscr.clrtoeol()
                 width = max(0, max_x - start_x)
                 if width > 0:
-                    stdscr.addstr(label_row, start_x, label[:width], curses.A_BOLD)
+                    stdscr.addstr(label_row, start_x, label[:width])
             except curses.error:
                 pass
 
@@ -447,3 +463,74 @@ class UIRenderer:
             self.nav.matrix_state = state
 
         return state
+
+    def _render_idle_matrix(
+        self,
+        stdscr: Any,
+        content_start_y: int,
+        label_row: int,
+        matrix_height: int,
+        max_x: int,
+    ) -> None:
+        count = min(12, max_x if max_x > 0 else 12)
+        if count <= 0:
+            return
+
+        state = self._idle_matrix_state
+        if (
+            state is None
+            or state.max_height != matrix_height
+            or state.max_width != max_x
+            or not state.streams
+        ):
+            columns = self._compute_columns(count, max_x) or [min(max_x - 1, i) for i in range(count)]
+            length = max(32, matrix_height * 2)
+            streams: list[IdleStream] = []
+            for idx in range(count):
+                column = columns[idx] if idx < len(columns) else min(max_x - 1, idx)
+                velocity = random.uniform(4.0, 9.0)
+                head = random.uniform(0, matrix_height - 1 if matrix_height > 1 else 0)
+                chars = "".join(random.choice("01") for _ in range(length))
+                streams.append(IdleStream(column=column, velocity=velocity, head=head, chars=chars))
+            state = IdleMatrixState(
+                streams=streams,
+                max_height=matrix_height,
+                max_width=max_x,
+                last_update=time.monotonic(),
+            )
+            self._idle_matrix_state = state
+
+        now = time.monotonic()
+        delta = 0.0 if state.last_update == 0 else now - state.last_update
+        state.last_update = now
+
+        trail_length = max(32, matrix_height * 2)
+
+        if 0 <= label_row:
+            try:
+                stdscr.move(label_row, 0)
+                stdscr.clrtoeol()
+            except curses.error:
+                pass
+
+        for stream in state.streams:
+            stream.head = (stream.head + stream.velocity * delta) % matrix_height
+            if len(stream.chars) < trail_length:
+                repeats = (trail_length // max(1, len(stream.chars))) + 2
+                stream.chars = (stream.chars * repeats)[: trail_length]
+            chars = stream.chars or "0"
+            length = len(chars)
+            col = max(0, min(max_x - 1, stream.column))
+            for row_offset in range(matrix_height):
+                y = content_start_y + row_offset
+                if y >= label_row:
+                    break
+                offset = int((stream.head - row_offset) % length)
+                ch = chars[offset]
+                attr = curses.A_DIM
+                if offset == int(stream.head % length):
+                    attr = curses.A_NORMAL
+                try:
+                    stdscr.addch(y, col, ch, attr)
+                except curses.error:
+                    pass
