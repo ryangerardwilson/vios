@@ -1,4 +1,4 @@
-# ~/Apps/vios/modules/constants.py
+# ~/Apps/vios/constants.py
 class Constants:
     CHEATSHEET = r"""
 VIOS CHEATSHEET

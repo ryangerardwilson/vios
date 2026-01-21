@@ -1,4 +1,4 @@
-# ~/Apps/vios/modules/directory_manager.py
+# ~/Apps/vios/directory_manager.py
 import os
 import fnmatch
 

@@ -1,4 +1,4 @@
-# ~/Apps/vios/modules/core_navigator.py
+# ~/Apps/vios/core_navigator.py
 import curses
 import subprocess
 import os
@@ -6,11 +6,11 @@ import shutil
 import shlex
 from typing import Any, Set, cast, List, Optional
 
-from .directory_manager import DirectoryManager
-from .clipboard_manager import ClipboardManager
-from .ui_renderer import UIRenderer
-from .input_handler import InputHandler
-from .constants import Constants
+from directory_manager import DirectoryManager
+from clipboard_manager import ClipboardManager
+from ui_renderer import UIRenderer
+from input_handler import InputHandler
+from constants import Constants
 
 
 class FileNavigator:

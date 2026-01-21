@@ -1,4 +1,4 @@
-# ~/Apps/vios/modules/input_handler.py
+# ~/Apps/vios/input_handler.py
 import curses
 import os
 import time

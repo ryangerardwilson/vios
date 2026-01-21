@@ -1,4 +1,4 @@
-# ~/Apps/vios/modules/clipboard_manager.py
+# ~/Apps/vios/clipboard_manager.py
 import os
 import shutil
 import tempfile

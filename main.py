@@ -3,7 +3,7 @@ import curses
 import os
 import sys
 
-from modules.core_navigator import FileNavigator
+from core_navigator import FileNavigator
 
 os.environ.setdefault("ESCDELAY", "25")
 

@@ -1,7 +1,7 @@
-# ~/Apps/vios/modules/ui_renderer.py
+# ~/Apps/vios/ui_renderer.py
 import curses
 from typing import Any, Optional, Tuple, cast
-from .directory_manager import DirectoryManager
+from directory_manager import DirectoryManager
 
 
 class UIRenderer:

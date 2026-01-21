@@ -5,8 +5,8 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from modules.input_handler import InputHandler
-from modules.core_navigator import FileNavigator
+from input_handler import InputHandler
+from core_navigator import FileNavigator
 
 
 class DummyClipboard:
