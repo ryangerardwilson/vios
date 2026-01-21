@@ -225,3 +225,15 @@ Supported options:
 
 If a handler command cannot be found, `o` falls back to its built-in defaults
 (Zathura for PDFs, swayimg for images, Vim for everything else).
+
+Reference template (`template_config.json`):
+
+```json
+{
+  "matrix_mode": true,
+  "handlers": {
+    "pdf_viewer": [["zathura"]],
+    "image_viewer": [["swayimg"]]
+  }
+}
+```
