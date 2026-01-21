@@ -44,6 +44,14 @@ class InputHandler:
         self.nav.status_message = "Clipboard cleared"
         self.nav.need_redraw = True
 
+    def _clear_marked_items(self):
+        if self.nav.marked_items:
+            self.nav.marked_items.clear()
+            self.nav.status_message = "Cleared marks"
+        else:
+            self.nav.status_message = "No marks to clear"
+        self.nav.need_redraw = True
+
     def _leader_rename(self, selection):
         if not selection:
             self._flash()
@@ -89,6 +97,7 @@ class InputHandler:
             "rn": lambda: self._leader_rename(selection),
             "cp": self._leader_copy_path,
             "b": self._leader_bookmark,
+            "cm": self._clear_marked_items,
         }
 
         if command in command_map:
