@@ -125,31 +125,22 @@ class FileActionService:
         mime_type, _ = mimetypes.guess_type(filepath)
         _, ext = os.path.splitext(filepath)
 
-        suspended = False
-
-        def ensure_suspended():
-            nonlocal suspended
-            if not suspended:
-                curses.endwin()
-                suspended = True
-
         handled = False
         try:
             if ext in (".csv", ".parquet"):
-                ensure_suspended()
                 subprocess.call(["vixl", filepath])
                 handled = True
             elif mime_type == "application/pdf":
                 handled = self._run_external_handlers(
-                    self.nav.config.get_handler_commands("pdf_viewer"), filepath, background=True, suspend=ensure_suspended
+                    self.nav.config.get_handler_commands("pdf_viewer"), filepath, background=True
                 )
             elif mime_type and mime_type.startswith("image/"):
                 handled = self._run_external_handlers(
-                    self.nav.config.get_handler_commands("image_viewer"), filepath, background=True, suspend=ensure_suspended
+                    self.nav.config.get_handler_commands("image_viewer"), filepath, background=True
                 )
             else:
                 handled = self._run_external_handlers(
-                    self.nav.config.get_handler_commands("editor"), filepath, background=False, suspend=ensure_suspended
+                    self.nav.config.get_handler_commands("editor"), filepath, background=False
                 )
         except FileNotFoundError:
             pass
@@ -165,7 +156,6 @@ class FileActionService:
         filepath: str,
         *,
         background: bool,
-        suspend,
     ) -> bool:
         if not handlers:
             return False
@@ -189,7 +179,6 @@ class FileActionService:
 
             try:
                 if background:
-                    suspend()
                     subprocess.Popen(
                         tokens,
                         stdout=subprocess.DEVNULL,
@@ -198,7 +187,6 @@ class FileActionService:
                         preexec_fn=os.setsid,
                     )
                 else:
-                    suspend()
                     subprocess.call(tokens)
                 return True
             except FileNotFoundError:
