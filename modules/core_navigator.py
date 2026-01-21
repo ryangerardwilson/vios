@@ -640,9 +640,17 @@ class FileNavigator:
             return False
 
         if real_target in self.bookmarks:
-            self.bookmark_index = self.bookmarks.index(real_target)
+            idx = self.bookmarks.index(real_target)
+            self.bookmarks.pop(idx)
+            if self.bookmarks:
+                if idx < len(self.bookmarks):
+                    self.bookmark_index = idx
+                else:
+                    self.bookmark_index = len(self.bookmarks) - 1
+            else:
+                self.bookmark_index = -1
             pretty = DirectoryManager.pretty_path(real_target)
-            self.status_message = f"Bookmark exists: {pretty}"
+            self.status_message = f"Unbookmarked {pretty}"
         else:
             self.bookmarks.append(real_target)
             self.bookmark_index = len(self.bookmarks) - 1

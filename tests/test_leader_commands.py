@@ -294,6 +294,13 @@ def test_bookmark_command_adds_current_path(tmp_path):
     assert nav.bookmark_index == 0
     assert "Bookmarked" in nav.status_message
 
+    handler.handle_key(None, ord(','))
+    handler.handle_key(None, ord('b'))
+
+    assert nav.bookmarks == []
+    assert nav.bookmark_index == -1
+    assert "Unbookmarked" in nav.status_message
+
 
 def test_ctrl_navigation_uses_bookmarks(tmp_path):
     root = tmp_path
@@ -308,8 +315,10 @@ def test_ctrl_navigation_uses_bookmarks(tmp_path):
     nav.add_bookmark(str(root))
     nav.change_directory(str(sub_a))
     nav.add_bookmark()
+    assert "Bookmarked" in nav.status_message
     nav.change_directory(str(sub_b))
     nav.add_bookmark()
+    assert "Bookmarked" in nav.status_message
 
     assert nav.bookmarks == [
         os.path.realpath(str(root)),
