@@ -590,15 +590,21 @@ class InputHandler:
 
         is_matrix = self.nav.layout_mode == "matrix"
 
-        if total > 0:
-            if is_matrix:
-                if key == ord("h"):
+        if is_matrix:
+            if key == ord("h"):
+                if total > 0:
                     self._move_selection(total, -1)
-                    return False
-                if key == ord("l"):
+                else:
+                    self._flash()
+                return False
+            if key == ord("l"):
+                if total > 0:
                     self._move_selection(total, 1)
-                    return False
-                if key == ord("j"):
+                else:
+                    self._flash()
+                return False
+            if key == ord("j"):
+                if total > 0:
                     if selected_is_dir and selected_path:
                         previous_path = self.nav.dir_manager.current_path
                         self.nav.remember_matrix_position()
@@ -611,34 +617,45 @@ class InputHandler:
                             self.nav.discard_matrix_position(previous_path)
                     elif selected_path:
                         self.nav.open_file(selected_path)
-                    elif total == 0:
-                        self._flash()
-                    return False
-                if key == ord("k"):
-                    parent = os.path.dirname(self.nav.dir_manager.current_path)
-                    if parent and parent != self.nav.dir_manager.current_path:
-                        if self.nav.change_directory(parent):
-                            self.in_filter_mode = False
-                            self.nav.dir_manager.filter_pattern = ""
-                            self.nav.exit_visual_mode()
-                            self.nav.update_visual_active(self.nav.browser_selected)
-                    return False
-            else:
-                if key == ord("j"):
+                else:
+                    self._flash()
+                return False
+            if key == ord("k"):
+                parent = os.path.dirname(self.nav.dir_manager.current_path)
+                if parent and parent != self.nav.dir_manager.current_path:
+                    if self.nav.change_directory(parent):
+                        self.in_filter_mode = False
+                        self.nav.dir_manager.filter_pattern = ""
+                        self.nav.exit_visual_mode()
+                        self.nav.update_visual_active(self.nav.browser_selected)
+                else:
+                    self._flash()
+                return False
+        else:
+            if key == ord("j"):
+                if total > 0:
                     self._move_selection(total, 1)
-                    return False
-                if key == ord("k"):
+                else:
+                    self._flash()
+                return False
+            if key == ord("k"):
+                if total > 0:
                     self._move_selection(total, -1)
-                    return False
-                if key == ord("h"):
-                    parent = os.path.dirname(self.nav.dir_manager.current_path)
-                    if parent and parent != self.nav.dir_manager.current_path:
-                        if self.nav.change_directory(parent):
-                            self.in_filter_mode = False
-                            self.nav.dir_manager.filter_pattern = ""
-                            self.nav.exit_visual_mode()
-                    return False
-                if key == ord("l"):
+                else:
+                    self._flash()
+                return False
+            if key == ord("h"):
+                parent = os.path.dirname(self.nav.dir_manager.current_path)
+                if parent and parent != self.nav.dir_manager.current_path:
+                    if self.nav.change_directory(parent):
+                        self.in_filter_mode = False
+                        self.nav.dir_manager.filter_pattern = ""
+                        self.nav.exit_visual_mode()
+                else:
+                    self._flash()
+                return False
+            if key == ord("l"):
+                if total > 0:
                     if selected_is_dir and selected_path:
                         if self.nav.change_directory(selected_path):
                             self.in_filter_mode = False
@@ -646,9 +663,9 @@ class InputHandler:
                             self.nav.exit_visual_mode()
                     elif selected_path:
                         self.nav.open_file(selected_path)
-                    elif total == 0:
-                        self._flash()
-                    return False
+                else:
+                    self._flash()
+                return False
 
         if key == curses.KEY_UP and total > 0:
             self._move_selection(total, -1)
