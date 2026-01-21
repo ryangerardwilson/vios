@@ -5,7 +5,7 @@ import os
 import sys
 import shutil
 import shlex
-from typing import Any, Set, cast, List
+from typing import Any, Set, cast, List, Optional
 
 from .directory_manager import DirectoryManager
 from .clipboard_manager import ClipboardManager
@@ -272,7 +272,14 @@ class FileNavigator:
         self.status_message = "No terminal found"
         curses.flash()
 
-    def create_new_file_no_open(self):
+    def _resolve_base_directory(self, base_path: Optional[str]) -> str:
+        if base_path:
+            candidate = os.path.realpath(base_path)
+            if os.path.isdir(candidate):
+                return candidate
+        return self.dir_manager.current_path
+
+    def create_new_file_no_open(self, base_path: Optional[str] = None):
         stdscr = self.renderer.stdscr
         if not stdscr:
             return
@@ -347,8 +354,9 @@ class FileNavigator:
         if not filename:
             return
 
-        unique_name = self.input_handler._get_unique_name(self.dir_manager.current_path, filename)
-        filepath = os.path.join(self.dir_manager.current_path, unique_name)
+        base_dir = self._resolve_base_directory(base_path)
+        unique_name = self.input_handler._get_unique_name(base_dir, filename)
+        filepath = os.path.join(base_dir, unique_name)
 
         try:
             with open(filepath, 'w'):
@@ -361,7 +369,7 @@ class FileNavigator:
             stdscr.getch()
             return
 
-    def create_new_directory(self):
+    def create_new_directory(self, base_path: Optional[str] = None):
         stdscr = self.renderer.stdscr
         if not stdscr:
             return
@@ -436,8 +444,9 @@ class FileNavigator:
         if not dirname:
             return
 
-        unique_name = self.input_handler._get_unique_name(self.dir_manager.current_path, dirname)
-        dirpath = os.path.join(self.dir_manager.current_path, unique_name)
+        base_dir = self._resolve_base_directory(base_path)
+        unique_name = self.input_handler._get_unique_name(base_dir, dirname)
+        dirpath = os.path.join(base_dir, unique_name)
 
         try:
             os.makedirs(dirpath)

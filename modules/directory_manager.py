@@ -9,6 +9,7 @@ class DirectoryManager:
         self.filter_pattern = ""
         self.show_hidden = False  # Default: hide dotfiles/dotdirs
         self.sort_mode = "alpha"
+        self.sort_map = {}
 
         # Keep home_path for pretty_path only
         self.home_path = os.path.realpath(os.path.expanduser("~"))
@@ -45,6 +46,9 @@ class DirectoryManager:
 
         visible_items = []
 
+        real_target = os.path.realpath(target_path)
+        sort_mode = self.sort_map.get(real_target, self.sort_mode)
+
         for item in raw_items:
             if item in {".", ".."}:
                 continue
@@ -61,10 +65,10 @@ class DirectoryManager:
 
             visible_items.append((item, is_dir))
 
-        if self.sort_mode == "alpha":
+        if sort_mode == "alpha":
             visible_items.sort(key=self._alpha_sort_key)
         else:
-            reverse = self.sort_mode == "mtime_desc"
+            reverse = sort_mode == "mtime_desc"
             visible_items.sort(key=self._mtime_sort_key_factory(target_path), reverse=reverse)
 
         return visible_items
@@ -100,6 +104,14 @@ class DirectoryManager:
     def set_sort_mode(self, mode: str):
         if mode in {"alpha", "mtime_asc", "mtime_desc"}:
             self.sort_mode = mode
+
+    def set_sort_mode_for_path(self, path: str, mode: str):
+        if mode not in {"alpha", "mtime_asc", "mtime_desc"}:
+            return
+        if not path:
+            return
+        real_path = os.path.realpath(path)
+        self.sort_map[real_path] = mode
 
     def _alpha_sort_key(self, entry):
         name, is_dir = entry

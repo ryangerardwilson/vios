@@ -40,7 +40,7 @@ class InputHandler:
     def _leader_copy_path(self):
         self.nav.copy_current_path()
 
-    def _handle_comma_command(self, key, total: int, selection) -> bool:
+    def _handle_comma_command(self, key, total: int, selection, context_path, scope_range, target_dir) -> bool:
         ch = self._key_to_char(key)
         if ch is None:
             self._reset_comma()
@@ -51,15 +51,17 @@ class InputHandler:
         self.nav.leader_sequence = "," + command
         self.nav.need_redraw = True
 
+        base_dir = context_path or target_dir or self.nav.dir_manager.current_path
+
         command_map = {
-            "j": lambda: self._set_browser_selected(total - 1 if total else 0),
-            "k": lambda: self._set_browser_selected(0),
-            "sa": lambda: self._set_sort_mode("alpha", "Sort: Name"),
-            "sma": lambda: self._set_sort_mode("mtime_asc", "Sort: Modified ↑"),
-            "smd": lambda: self._set_sort_mode("mtime_desc", "Sort: Modified ↓"),
+            "j": lambda: self._jump_to_scope_edge("down", scope_range, total),
+            "k": lambda: self._jump_to_scope_edge("up", scope_range, total),
+            "sa": lambda: self._set_sort_mode("alpha", "Sort: Name", context_path),
+            "sma": lambda: self._set_sort_mode("mtime_asc", "Sort: Modified ↑", context_path),
+            "smd": lambda: self._set_sort_mode("mtime_desc", "Sort: Modified ↓", context_path),
             "cl": self._clear_clipboard,
-            "nf": self.nav.create_new_file_no_open,
-            "nd": self.nav.create_new_directory,
+            "nf": lambda: self.nav.create_new_file_no_open(base_dir),
+            "nd": lambda: self.nav.create_new_directory(base_dir),
             "rn": lambda: self._leader_rename(selection),
             "cp": self._leader_copy_path,
         }
@@ -83,10 +85,91 @@ class InputHandler:
             return
         self.nav.browser_selected = max(0, min(index, total - 1))
 
-    def _set_sort_mode(self, mode: str, message: str):
-        self.nav.dir_manager.set_sort_mode(mode)
-        self.nav.status_message = message
+    def _jump_to_scope_edge(self, direction: str, scope_range, total: int):
+        if scope_range:
+            start, end = scope_range
+            if start is not None and end is not None and 0 <= start < total and 0 <= end < total:
+                target = start if direction == "up" else end
+                self.nav.browser_selected = target
+                return
+        if direction == "up":
+            self._set_browser_selected(0)
+        else:
+            self._set_browser_selected(total - 1 if total else 0)
+
+    def _set_sort_mode(self, mode: str, message: str, context_path):
+        if context_path:
+            self.nav.dir_manager.set_sort_mode_for_path(context_path, mode)
+            pretty = os.path.basename(context_path.rstrip(os.sep)) or context_path
+            self.nav.status_message = f"{message} ({pretty})"
+        else:
+            self.nav.dir_manager.set_sort_mode(mode)
+            self.nav.status_message = message
         self.nav.need_redraw = True
+
+    def _compute_context_scope(self, items, selected_index):
+        if not items or selected_index < 0 or selected_index >= len(items):
+            return (None, None)
+
+        _, is_dir, selected_path, depth = items[selected_index]
+        context_index = None
+
+        if depth > 0:
+            context_index = self._find_context_directory_index(items, selected_index)
+        elif is_dir and selected_path in self.nav.expanded_nodes:
+            context_index = selected_index
+
+        if context_index is None:
+            return (None, None)
+
+        context_entry = items[context_index]
+        context_path = os.path.realpath(context_entry[2])
+        scope_range = self._find_scope_range_for_directory(items, context_index)
+        return (context_path, scope_range)
+
+    def _find_context_directory_index(self, items, selected_index):
+        if selected_index < 0 or selected_index >= len(items):
+            return None
+
+        _, is_dir, _, depth = items[selected_index]
+        if is_dir:
+            return selected_index
+
+        current_depth = depth
+
+        for idx in range(selected_index - 1, -1, -1):
+            _, candidate_is_dir, _, candidate_depth = items[idx]
+            if candidate_depth < current_depth:
+                if candidate_is_dir:
+                    return idx
+                current_depth = candidate_depth
+
+        return None
+
+    def _find_scope_range_for_directory(self, items, dir_index):
+        if dir_index < 0 or dir_index >= len(items):
+            return None
+
+        base_depth = items[dir_index][3]
+        first_child = None
+        last_child = None
+
+        for idx in range(dir_index + 1, len(items)):
+            _, _, _, depth = items[idx]
+            if depth <= base_depth:
+                break
+            if first_child is None:
+                first_child = idx
+            last_child = idx
+
+        if first_child is None:
+            first_child = dir_index
+            last_child = dir_index
+
+        if last_child is None:
+            last_child = first_child
+
+        return (first_child, last_child)
 
     def _reset_comma(self):
         self.pending_comma = False
@@ -199,6 +282,9 @@ class InputHandler:
         selection = None
         selected_name = selected_path = selected_is_dir = None
         target_dir = self.nav.dir_manager.current_path
+        context_path = None
+        scope_range = None
+
         if total == 0:
             self.nav.browser_selected = 0
         else:
@@ -206,6 +292,7 @@ class InputHandler:
             selection = display_items[self.nav.browser_selected]
             selected_name, selected_is_dir, selected_path, _ = selection
             target_dir = self._determine_target_directory(selected_path, selected_is_dir)
+            context_path, scope_range = self._compute_context_scope(display_items, self.nav.browser_selected)
 
         if key == ord(','):
             self.pending_comma = True
@@ -216,7 +303,7 @@ class InputHandler:
             return False
 
         if self.pending_comma:
-            if self._handle_comma_command(key, total, selection):
+            if self._handle_comma_command(key, total, selection, context_path, scope_range, target_dir):
                 return False
 
         if key == 8:  # Ctrl+H
