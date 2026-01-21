@@ -22,6 +22,11 @@ class Orchestrator:
         navigator.renderer.stdscr = stdscr
 
         curses.curs_set(0)
+        try:
+            curses.start_color()
+            curses.use_default_colors()
+        except Exception:
+            pass
 
         try:
             stdscr.keypad(True)
