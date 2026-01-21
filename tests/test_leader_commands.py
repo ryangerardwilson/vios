@@ -126,7 +126,7 @@ class DummyNavigator:
     def reanchor_visual_mode(self, index):
         self.enter_visual_mode(index)
 
-    def exit_visual_mode(self):
+    def exit_visual_mode(self, clear_message: bool = True):
         self.visual_mode = False
         self.visual_anchor_index = None
         self.visual_active_index = None
@@ -480,5 +480,15 @@ def test_visual_mode_enter_move_and_exit():
     assert nav.browser_selected == 1
     assert nav.get_visual_indices(len(items)) == [0, 1]
 
-    handler.handle_key(None, 27)  # Esc
+    handler.handle_key(None, ord("v"))  # Commit to marks
     assert not nav.visual_mode
+    assert "/proj/a.txt" in nav.marked_items
+    assert "/proj/b.txt" in nav.marked_items
+
+    handler.handle_key(None, ord("v"))  # Start new selection appended to marks
+    assert nav.visual_mode
+    handler.handle_key(None, ord("j"))
+    assert nav.browser_selected == 2
+    handler.handle_key(None, ord("v"))  # Commit second selection
+    assert not nav.visual_mode
+    assert "/proj/c.txt" in nav.marked_items

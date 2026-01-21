@@ -92,9 +92,9 @@ python main.py
   - `x` — Delete all marked items or the current selection immediately (bypasses clipboard)
   - `p` — Paste the clipboard into the selected directory (or next to the selected file)
 - **Visual Mode**:
-  - `v` — Enter visual mode anchored at the current row (press again to re-anchor)
+  - `v` — Enter visual mode anchored at the current row; press `v` again to add the highlighted range to your marks (supports multiple ranges)
   - `j` / `k` — Extend or shrink the selection while in visual mode
-  - `Esc` — Exit visual mode
+  - `Esc` — Exit visual mode without adding the selection
 - **File Opening**:
   - Text files (`.py`, `.txt`, `.md`, etc.) → opened in **Vim**
   - PDF files → opened in **Zathura** (if available)
@@ -136,9 +136,9 @@ modal file browser without leaving the terminal.
 
 ### Visual Mode
 
-- v: Enter visual mode (press v again to re-anchor at the cursor).
-- j / k: Extend or shrink the selection.
-- Esc: Exit visual mode.
+- v: Enter visual mode at the cursor. Press v again to append the highlighted range to the marked set (repeat for multiple ranges).
+- j / k: Extend or shrink the active visual selection.
+- Esc: Exit visual mode without adding the current range.
 
 ### Command Mode (`i`)
 

@@ -235,13 +235,13 @@ class FileNavigator:
     def reanchor_visual_mode(self, index: int):
         self.enter_visual_mode(index)
 
-    def exit_visual_mode(self):
+    def exit_visual_mode(self, *, clear_message: bool = True):
         if not self.visual_mode:
             return
         self.visual_mode = False
         self.visual_anchor_index = None
         self.visual_active_index = None
-        if self.status_message.startswith("-- VISUAL"):
+        if clear_message and self.status_message.startswith("-- VISUAL"):
             self.status_message = ""
         self.need_redraw = True
 

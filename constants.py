@@ -32,9 +32,9 @@ Clipboard & Multi Operations
   p               Paste clipboard into selected directory (or alongside selected file)
 
 Visual Mode
-   v               Enter visual selection starting at cursor (re-anchors if active)
-   j / k           Extend/shrink selection while in visual mode
-   Esc             Exit visual mode
+  v               Enter visual selection; press v again to add range to marks
+  j / k           Extend/shrink selection while in visual mode
+  Esc             Exit visual mode without adding range
 
 Other
   t               Open terminal in current directory

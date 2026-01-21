@@ -403,7 +403,7 @@ class InputHandler:
         if key == ord("v"):
             if total > 0:
                 if getattr(self.nav, "visual_mode", False):
-                    self.nav.reanchor_visual_mode(self.nav.browser_selected)
+                    self._commit_visual_selection(display_items)
                 else:
                     self.nav.enter_visual_mode(self.nav.browser_selected)
             else:
@@ -733,3 +733,37 @@ class InputHandler:
         self.nav.status_message = f"{action} {count} {noun} to clipboard"
         self.nav.exit_visual_mode()
         return True
+
+    def _commit_visual_selection(self, items):
+        if not getattr(self.nav, "visual_mode", False):
+            return
+        indices = self.nav.get_visual_indices(len(items))
+        if not indices:
+            self.nav.exit_visual_mode()
+            return
+
+        unique_paths = []
+        for idx in indices:
+            if 0 <= idx < len(items):
+                path = items[idx][2]
+                if path not in unique_paths:
+                    unique_paths.append(path)
+
+        if not unique_paths:
+            self.nav.exit_visual_mode()
+            return
+
+        newly_added = 0
+        for path in unique_paths:
+            if path not in self.nav.marked_items:
+                newly_added += 1
+            self.nav.marked_items.add(path)
+
+        count = len(unique_paths)
+        noun = "item" if count == 1 else "items"
+        self.nav.exit_visual_mode(clear_message=False)
+        if newly_added == 0 and count > 0:
+            self.nav.status_message = f"Selection already marked ({count} {noun})"
+        else:
+            added_text = "" if newly_added == count else f" (added {newly_added})"
+            self.nav.status_message = f"Marked {count} {noun}{added_text}".strip()
