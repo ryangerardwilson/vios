@@ -209,4 +209,4 @@ if ! $no_modify_path && [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
 fi
 
 info "Installed ${APP^^} (${installed_label:-unknown}) to $INSTALL_DIR/$APP"
-info "Run: ${APP} --help"
+info "Run: ${APP} -h"
