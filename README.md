@@ -230,7 +230,7 @@ Reference template (`template_config.json`):
 
 ```json
 {
-  "matrix_mode": true,
+  "matrix_mode": false,
   "handlers": {
     "pdf_viewer": [["zathura"]],
     "image_viewer": [["swayimg"]]

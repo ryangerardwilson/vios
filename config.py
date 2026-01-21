@@ -13,7 +13,7 @@ DEFAULT_HANDLERS: Dict[str, List[List[str]]] = {
 
 @dataclass
 class UserConfig:
-    matrix_mode: bool = True
+    matrix_mode: bool = False
     handlers: Dict[str, List[List[str]]] = field(
         default_factory=lambda: {key: [cmd[:] for cmd in value] for key, value in DEFAULT_HANDLERS.items()}
     )
@@ -78,7 +78,7 @@ def load_user_config() -> UserConfig:
 
     matrix_mode = data.get("matrix_mode")
     if not isinstance(matrix_mode, bool):
-        matrix_mode = True
+        matrix_mode = False
 
     handlers = _normalize_handlers(data.get("handlers", {}))
 
