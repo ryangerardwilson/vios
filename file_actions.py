@@ -195,13 +195,13 @@ class FileActionService:
                 pass
 
         try:
-            for cmd in ("nvim", "vim"):
-                if shutil.which(cmd):
-                    try:
-                        subprocess.call([cmd, filepath])
-                        return True
-                    except Exception:
-                        continue
+            cmd = "vim"
+            if shutil.which(cmd):
+                try:
+                    subprocess.call([cmd, filepath])
+                    return True
+                except Exception:
+                    pass
         finally:
             if stdscr_opt is not None:
                 try:

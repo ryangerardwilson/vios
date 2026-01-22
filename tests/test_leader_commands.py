@@ -88,6 +88,16 @@ class DummyNavigator:
         self.expanded_nodes.difference_update(to_remove)
         self.collapsed_paths.append(real)
 
+    def collapse_branch(self, base_path):
+        real = os.path.realpath(base_path)
+        new_nodes = set()
+        for entry in self.expanded_nodes:
+            entry_real = os.path.realpath(entry)
+            if entry_real == real or entry_real.startswith(f"{real}{os.sep}"):
+                continue
+            new_nodes.add(entry)
+        self.expanded_nodes = new_nodes
+
     def reset_to_home(self):
         self.reset_home_called = True
         self.expanded_nodes.clear()
@@ -729,3 +739,50 @@ def test_directory_shortcut_change_and_terminal(tmp_path):
     assert nav.changed_dirs[-1] == os.path.realpath(str(target_dir))
     assert nav.terminal_calls == [os.path.realpath(str(target_dir))]
     assert "terminal" in nav.status_message.lower()
+
+
+def _make_nested_items(parent_path: str, child_name: str):
+    child_path = os.path.join(parent_path, child_name)
+    return [
+        (os.path.basename(parent_path), True, parent_path, 0),
+        (child_name, False, child_path, 1),
+    ]
+
+
+def test_e_on_file_collapses_parent(tmp_path):
+    parent_dir_path = tmp_path / "docs"
+    parent_dir_path.mkdir()
+    child_name = "notes.txt"
+    (parent_dir_path / child_name).write_text("hello")
+    parent_dir = os.path.realpath(str(parent_dir_path))
+    items = _make_nested_items(parent_dir, child_name)
+
+    nav = DummyNavigator(items, str(tmp_path))
+    nav.expanded_nodes.add(parent_dir)
+    nav.browser_selected = 1
+    handler = InputHandler(nav)
+
+    handler.handle_key(None, ord("e"))
+
+    assert parent_dir not in nav.expanded_nodes
+    assert "collapsed" in nav.status_message.lower()
+    assert nav.need_redraw
+
+
+def test_e_on_file_expands_parent(tmp_path):
+    parent_dir_path = tmp_path / "docs"
+    parent_dir_path.mkdir()
+    child_name = "notes.txt"
+    (parent_dir_path / child_name).write_text("hello")
+    parent_dir = os.path.realpath(str(parent_dir_path))
+    items = _make_nested_items(parent_dir, child_name)
+
+    nav = DummyNavigator(items, str(tmp_path))
+    nav.browser_selected = 1
+    handler = InputHandler(nav)
+
+    handler.handle_key(None, ord("e"))
+
+    assert parent_dir in nav.expanded_nodes
+    assert "expanded" in nav.status_message.lower()
+    assert nav.need_redraw

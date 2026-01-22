@@ -219,7 +219,7 @@ Supported options:
     "handlers": {
       "pdf_viewer": [["zathura"]],
       "image_viewer": [["swayimg"]],
-      "editor": [["nvim", "-c", "cd {file}"], ["vim"]]
+      "editor": [["vim"]]
     }
   }
   ```

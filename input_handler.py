@@ -590,14 +590,24 @@ class InputHandler:
             self.nav.open_terminal()
             return False
 
-        if key == ord("e") and total > 0 and selected_is_dir and selected_path:
+        if key == ord("e") and total > 0 and selected_path:
             self.nav.exit_visual_mode()
-            if selected_path in self.nav.expanded_nodes:
-                self.nav.collapse_branch(selected_path)
-                self.nav.status_message = f"Collapsed {selected_name}"
+            if selected_is_dir:
+                target_path = selected_path
             else:
-                self.nav.expanded_nodes.add(selected_path)
-                self.nav.status_message = f"Expanded {selected_name}"
+                target_path = os.path.dirname(selected_path)
+
+            if not target_path:
+                self._flash()
+                return False
+
+            target_name = os.path.basename(target_path) or target_path
+            if target_path in self.nav.expanded_nodes:
+                self.nav.collapse_branch(target_path)
+                self.nav.status_message = f"Collapsed {target_name}"
+            else:
+                self.nav.expanded_nodes.add(target_path)
+                self.nav.status_message = f"Expanded {target_name}"
             self.nav.need_redraw = True
             return False
 
