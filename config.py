@@ -203,9 +203,7 @@ def _normalize_workspace_shortcuts(
         if normalized_entry:
             shortcuts[token] = normalized_entry
         else:
-            warnings.append(
-                f"workspace_shortcuts '{raw_key}' ignored (no valid paths)"
-            )
+            warnings.append(f"workspace_shortcuts '{raw_key}' ignored (no valid paths)")
 
     return shortcuts, warnings
 

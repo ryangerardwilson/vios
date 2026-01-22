@@ -103,8 +103,11 @@ class InputHandler:
         file_shortcuts = getattr(self.nav.config, "file_shortcuts", {}) or {}
 
         def _file_handler(token: str, command_repr: str):
-            return lambda shortcut_token=token, command_display=command_repr: self._launch_file_shortcut(
-                shortcut_token, command_display
+            return (
+                lambda shortcut_token=token,
+                command_display=command_repr: self._launch_file_shortcut(
+                    shortcut_token, command_display
+                )
             )
 
         for token in sorted(file_shortcuts):
@@ -146,7 +149,8 @@ class InputHandler:
             if command_key in command_map:
                 continue
             command_map[command_key] = (
-                lambda shortcut_token=token, prefix=command_key: self._invoke_workspace_shortcut(
+                lambda shortcut_token=token,
+                prefix=command_key: self._invoke_workspace_shortcut(
                     shortcut_token, command_prefix=prefix
                 )
             )
@@ -307,9 +311,7 @@ class InputHandler:
             return
 
         if not os.path.isfile(path):
-            self.nav.status_message = (
-                f"Shortcut ,{command_display} target missing: {os.path.basename(path) or path}"
-            )
+            self.nav.status_message = f"Shortcut ,{command_display} target missing: {os.path.basename(path) or path}"
             self.nav.need_redraw = True
             self._flash()
             return
@@ -330,18 +332,14 @@ class InputHandler:
 
         command = f",{command_prefix}"
         if not path:
-            self.nav.status_message = (
-                f"No directory shortcut configured for {command}"
-            )
+            self.nav.status_message = f"No directory shortcut configured for {command}"
             self.nav.need_redraw = True
             self._flash()
             return
 
         if not os.path.isdir(path):
             pretty = os.path.basename(path.rstrip(os.sep)) or path
-            self.nav.status_message = (
-                f"Shortcut {command} missing directory: {pretty}"
-            )
+            self.nav.status_message = f"Shortcut {command} missing directory: {pretty}"
             self.nav.need_redraw = True
             self._flash()
             return
@@ -376,9 +374,7 @@ class InputHandler:
 
         command = f",{command_prefix}"
         if not entry:
-            self.nav.status_message = (
-                f"No workspace shortcut configured for {command}"
-            )
+            self.nav.status_message = f"No workspace shortcut configured for {command}"
             self.nav.need_redraw = True
             self._flash()
             return
@@ -414,7 +410,9 @@ class InputHandler:
                 )
             elif os.path.isdir(internal_path):
                 if self.nav.change_directory(internal_path):
-                    pretty = os.path.basename(internal_path.rstrip(os.sep)) or internal_path
+                    pretty = (
+                        os.path.basename(internal_path.rstrip(os.sep)) or internal_path
+                    )
                     fragments.append(f"jumped to {pretty}")
                     success = True
                 else:
