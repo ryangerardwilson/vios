@@ -26,6 +26,7 @@ class InputHandler:
 
         self.last_escape_time = 0.0
         self.escape_double_threshold = 0.4
+        self.command_cwd: str | None = None
 
     def _check_operator_timeout(self):
         if self.pending_operator and (
@@ -342,6 +343,12 @@ class InputHandler:
         self.nav.command_buffer = ""
         self.nav.status_message = ""
         self.nav.leader_sequence = ""
+
+        try:
+            self.command_cwd = os.path.realpath(self.nav.dir_manager.current_path)
+        except Exception:
+            self.command_cwd = self.nav.dir_manager.current_path
+
         self.nav.need_redraw = True
 
     def _handle_command_mode_key(self, key: int) -> None:
@@ -356,6 +363,7 @@ class InputHandler:
             self.nav.command_buffer = ""
             self.nav.status_message = "Command cancelled"
             self.nav.need_redraw = True
+            self.command_cwd = None
             return
 
         if key in (curses.KEY_BACKSPACE, 127, 8):
@@ -366,6 +374,7 @@ class InputHandler:
                 self.nav.command_mode = False
                 self.nav.status_message = "Command cancelled"
                 self.nav.need_redraw = True
+                self.command_cwd = None
             return
 
         char = self._key_to_char(key)
@@ -378,6 +387,7 @@ class InputHandler:
             self.nav.command_mode = False
             self.nav.status_message = "No command entered"
             self.nav.need_redraw = True
+            self.command_cwd = None
             return
 
         if command.startswith("!"):
@@ -386,6 +396,7 @@ class InputHandler:
                 self.nav.command_mode = False
                 self.nav.status_message = "Empty shell command"
                 self.nav.need_redraw = True
+                self.command_cwd = None
                 return
             self._run_shell_command(shell_cmd)
             return
@@ -394,6 +405,7 @@ class InputHandler:
         self._flash()
         self.nav.command_mode = False
         self.nav.need_redraw = True
+        self.command_cwd = None
 
     def _run_shell_command(self, shell_cmd: str) -> None:
         stdscr_opt = getattr(self.nav.renderer, "stdscr", None)
@@ -409,7 +421,10 @@ class InputHandler:
                 pass
             suspended = True
 
-        cwd = self.nav.dir_manager.current_path
+        cwd_candidate = self.command_cwd or self.nav.dir_manager.current_path
+        cwd = os.path.realpath(cwd_candidate)
+        if not os.path.isdir(cwd):
+            cwd = self.nav.dir_manager.current_path
         return_code = None
         error_message = ""
 
@@ -463,6 +478,7 @@ class InputHandler:
         self.nav.command_mode = False
         self.nav.status_message = message
         self.nav.need_redraw = True
+        self.command_cwd = None
 
     def _wait_for_escape_key(self) -> None:
         stdin = sys.stdin

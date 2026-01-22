@@ -4,6 +4,7 @@ import time
 import subprocess
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
@@ -995,6 +996,39 @@ def test_command_mode_cancel(tmp_path):
 
     assert not nav.command_mode
     assert "cancelled" in nav.status_message.lower()
+
+
+def test_command_mode_runs_in_current_directory(tmp_path):
+    root = tmp_path
+    subdir = root / "sub"
+    subdir.mkdir()
+
+    nav = FileNavigator(str(root))
+    handler = nav.input_handler
+    nav.enter_list_mode()
+
+    items = nav.build_display_items()
+    sub_real = os.path.realpath(str(subdir))
+    sub_index = next(
+        idx
+        for idx, (_, _, path, _) in enumerate(items)
+        if os.path.realpath(path) == sub_real
+    )
+    nav.browser_selected = sub_index
+
+    mock_result = SimpleNamespace(returncode=0)
+
+    with patch("input_handler.subprocess.run", return_value=mock_result) as mock_run, patch(
+        "input_handler.sys.stdin.isatty", return_value=False
+    ):
+        handler.handle_key(None, ord(":"))
+        for ch in "!pwd":
+            handler.handle_key(None, ord(ch))
+        handler.handle_key(None, 10)
+
+    assert mock_run.called
+    assert mock_run.call_args.kwargs.get("cwd") == os.path.realpath(str(root))
+    assert handler.command_cwd is None
 
 
 def _make_nested_items(parent_path: str, child_name: str):
