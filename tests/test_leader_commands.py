@@ -61,8 +61,13 @@ class DummyNavigator:
         self.visual_anchor_index = None
         self.visual_active_index = None
         self.config = SimpleNamespace(
-            file_shortcuts={}, dir_shortcuts={}, workspace_shortcuts={}
+            file_shortcuts={},
+            dir_shortcuts={},
+            workspace_shortcuts={},
+            browser_shortcuts={},
+            browser_commands=[],
         )
+        self.file_actions = SimpleNamespace(open_url=lambda url: True)
         self.opened_paths = []
         self.changed_dirs = []
         self.layout_mode = "list"
@@ -729,6 +734,49 @@ def test_directory_shortcut_opens_terminal_without_nav_change(tmp_path):
     assert nav.dir_manager.current_path == os.path.realpath(str(tmp_path))
     assert nav.terminal_calls == [os.path.realpath(str(target_dir))]
     assert "terminal" in nav.status_message.lower()
+
+
+def test_browser_shortcut_opens_url():
+    nav = DummyNavigator([], "/proj")
+    recorded: list[str] = []
+
+    def _open_url(url):
+        recorded.append(url)
+        return True
+
+    nav.config.browser_shortcuts = {"x": "https://x.com"}
+    nav.file_actions = SimpleNamespace(open_url=_open_url)
+
+    handler = InputHandler(nav)
+    handler.pending_comma = True
+    handler.comma_sequence = ""
+    handler._handle_comma_command(
+        ord("i"), 0, None, None, None, nav.dir_manager.current_path
+    )
+    handler._handle_comma_command(
+        ord("x"), 0, None, None, None, nav.dir_manager.current_path
+    )
+
+    assert recorded == ["https://x.com"]
+    assert "opened url" in nav.status_message.lower()
+    assert not handler.pending_comma
+
+
+def test_browser_shortcut_missing_mapping():
+    nav = DummyNavigator([], "/proj")
+    handler = InputHandler(nav)
+
+    handler.pending_comma = True
+    handler.comma_sequence = ""
+    handler._handle_comma_command(
+        ord("i"), 0, None, None, None, nav.dir_manager.current_path
+    )
+    handler._handle_comma_command(
+        ord("z"), 0, None, None, None, nav.dir_manager.current_path
+    )
+
+    assert "no browser shortcut" in nav.status_message.lower()
+    assert not handler.pending_comma
 
 
 def test_workspace_shortcut_opens_internal_and_external(tmp_path):

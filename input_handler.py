@@ -161,6 +161,18 @@ class InputHandler:
                 )
             )
 
+        browser_shortcuts = getattr(self.nav.config, "browser_shortcuts", {}) or {}
+        for token in sorted(browser_shortcuts):
+            command_key = f"i{token}"
+            if command_key in command_map:
+                continue
+            command_map[command_key] = (
+                lambda shortcut_token=token,
+                prefix=command_key: self._invoke_browser_shortcut(
+                    shortcut_token, command_prefix=prefix
+                )
+            )
+
         if command in command_map:
             command_map[command]()
             self._reset_comma()
@@ -536,6 +548,35 @@ class InputHandler:
                 _resume_curses()
 
         return success
+
+    def _invoke_browser_shortcut(self, token: str, *, command_prefix: str) -> None:
+        shortcuts = getattr(self.nav.config, "browser_shortcuts", {}) or {}
+        command = f",{command_prefix}"
+
+        url = shortcuts.get(token)
+        if not url:
+            self.nav.status_message = (
+                f"No browser shortcut configured for {command}"
+            )
+            self.nav.need_redraw = True
+            self._flash()
+            return
+
+        open_url_fn = getattr(self.nav.file_actions, "open_url", None)
+        opened = False
+        if callable(open_url_fn):
+            try:
+                opened = bool(open_url_fn(url))
+            except Exception:
+                opened = False
+
+        if opened:
+            self.nav.status_message = f"Opened URL {url}"
+        else:
+            self.nav.status_message = f"Failed to open URL for {command}"
+            self._flash()
+
+        self.nav.need_redraw = True
 
     def _invoke_directory_shortcut(
         self,

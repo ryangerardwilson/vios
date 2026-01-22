@@ -12,6 +12,8 @@ class UserConfig:
     file_shortcuts: Dict[str, str] = field(default_factory=dict)
     dir_shortcuts: Dict[str, str] = field(default_factory=dict)
     workspace_shortcuts: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    browser_commands: List[List[str]] = field(default_factory=list)
+    browser_shortcuts: Dict[str, str] = field(default_factory=dict)
     warnings: List[str] = field(default_factory=list)
 
     def get_handler_commands(self, name: str) -> List[List[str]]:
@@ -229,6 +231,65 @@ def _normalize_workspace_shortcuts(
     return shortcuts, warnings
 
 
+def _normalize_browser_setup(
+    raw_browser,
+) -> Tuple[List[List[str]], Dict[str, str], List[str]]:
+    commands: List[List[str]] = []
+    shortcuts: Dict[str, str] = {}
+    warnings: List[str] = []
+
+    if not isinstance(raw_browser, dict):
+        return commands, shortcuts, warnings
+
+    raw_commands = raw_browser.get("command")
+    if isinstance(raw_commands, list):
+        for entry in raw_commands:
+            cmd = _normalize_command(entry)
+            if cmd:
+                commands.append(cmd)
+    else:
+        cmd = _normalize_command(raw_commands)
+        if cmd:
+            commands.append(cmd)
+
+    raw_shortcuts = raw_browser.get("shortcuts", {})
+    if isinstance(raw_shortcuts, dict):
+        for raw_key, raw_value in raw_shortcuts.items():
+            if not isinstance(raw_key, str):
+                warnings.append("browser shortcut key ignored (not a string)")
+                continue
+
+            token = raw_key.strip().lower()
+            if not token:
+                warnings.append("browser shortcut entry ignored (empty key)")
+                continue
+
+            if not token.isalnum():
+                warnings.append(
+                    f"browser shortcut key '{raw_key}' ignored (use alphanumeric tokens)"
+                )
+                continue
+
+            if not isinstance(raw_value, str):
+                warnings.append(
+                    f"browser shortcut '{raw_key}' ignored (URL must be a string)"
+                )
+                continue
+
+            url = raw_value.strip()
+            if not url:
+                warnings.append(
+                    f"browser shortcut '{raw_key}' ignored (empty URL)"
+                )
+                continue
+
+            shortcuts[token] = url
+    else:
+        warnings.append("browser shortcuts ignored (expected object)")
+
+    return commands, shortcuts, warnings
+
+
 def load_user_config() -> UserConfig:
     path = _config_path()
     data = {}
@@ -258,7 +319,11 @@ def load_user_config() -> UserConfig:
         data.get("workspace_shortcuts", {})
     )
 
-    warnings = file_warnings + dir_warnings + workspace_warnings
+    browser_commands, browser_shortcuts, browser_warnings = _normalize_browser_setup(
+        data.get("browser_setup")
+    )
+
+    warnings = file_warnings + dir_warnings + workspace_warnings + browser_warnings
 
     return UserConfig(
         matrix_mode=matrix_mode,
@@ -266,6 +331,8 @@ def load_user_config() -> UserConfig:
         file_shortcuts=file_shortcuts,
         dir_shortcuts=dir_shortcuts,
         workspace_shortcuts=workspace_shortcuts,
+        browser_commands=browser_commands,
+        browser_shortcuts=browser_shortcuts,
         warnings=warnings,
     )
 

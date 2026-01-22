@@ -88,6 +88,7 @@ python main.py
   - `,cp` — Copy `cd` command for current path to system clipboard
   - `,cl` — Clear clipboard contents
   - `,cm` — Clear all marks
+  - `,i<token>` — Open configured browser shortcut (e.g. `,ix`)
 - **Powerful Filtering** (glob-style):
   - `/` — Enter filter mode
     - Type pattern (e.g., `rat`, `*.py`, `*test*`)
@@ -185,6 +186,7 @@ modal file browser without leaving the terminal.
 - ,cp: Copy a `cd` command for the current directory to the system clipboard.
 - ,cl: Clear the multi-item clipboard buffer.
 - ,cm: Clear all marks.
+- ,i<token>: Open configured browser shortcut (e.g. `,ix`).
 
 ---
 
@@ -243,6 +245,9 @@ Supported options:
   `external` side spawn a new terminal and run there, while `internal` command arrays run
   synchronously inside `o`. Trigger with `,w<token>` to open both targets (internal opens
   inside `o`, external launches via handlers/terminal).
+- `browser_setup` — configure URL launchers for `,i<token>` shortcuts.
+  - `command`: list of command arrays to try when opening URLs. Use `{url}` as a placeholder (if omitted, the URL is appended).
+  - `shortcuts`: map tokens to URLs (e.g. `{ "x": "https://x.com" }`). Trigger with `,i<token>`.
 
 If a handler command or mapping is missing, `o` simply leaves the file
 unopened. Configure viewers/editors explicitly to control how files launch.
@@ -276,6 +281,12 @@ Reference template:
     "analysis": {
       "internal": [["code", "~/Projects/alpha"]],
       "external": [["libreoffice", "~/Documents/data/report.csv"]]
+    }
+  },
+  "browser_setup": {
+    "command": [["xdg-open"]],
+    "shortcuts": {
+      "home": "https://example.com"
     }
   }
 }
@@ -314,6 +325,13 @@ to your own tools and directory structure:
       "internal": [["code", "~/Projects/alpha"]],
       "external": [["libreoffice", "~/Documents/data/report.csv"]]
     }
+  },
+  "browser_setup": {
+    "command": [["google-chrome-stable"]],
+    "shortcuts": {
+      "x": "https://x.com",
+      "docs": "https://docs.example.com"
+    }
   }
 }
 ```
@@ -339,6 +357,9 @@ to your own tools and directory structure:
     with a dataset in a separate terminal. Each entry accepts either a direct
     path or an array describing a command (CSV/Parquet commands launch in a
     terminal automatically).
+- `browser_setup` defines how URLs launch:
+  - `command` lists browser commands to try (each entry is a shell command array; `{url}` is replaced automatically or appended if absent).
+  - `shortcuts` map tokens to URLs, making `,i<token>` open the URL in your preferred browser.
 
 Feel free to swap out the sample applications (Evince, Feh, LibreOffice, etc.)
 with whatever viewers and editors you have installed.
