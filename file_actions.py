@@ -131,16 +131,12 @@ class FileActionService:
         is_text_like = False
         try:
             if ext == ".csv":
-                handled = self._run_external_handlers(
-                    self.nav.config.get_handler_commands("csv_viewer"),
-                    filepath,
-                    background=True,
+                handled = self._run_terminal_handlers(
+                    self.nav.config.get_handler_commands("csv_viewer"), filepath
                 )
             elif ext == ".parquet":
-                handled = self._run_external_handlers(
-                    self.nav.config.get_handler_commands("parquet_viewer"),
-                    filepath,
-                    background=True,
+                handled = self._run_terminal_handlers(
+                    self.nav.config.get_handler_commands("parquet_viewer"), filepath
                 )
             elif mime_type == "application/pdf":
                 handled = self._run_external_handlers(
@@ -272,6 +268,30 @@ class FileActionService:
                 continue
             except Exception:
                 continue
+
+        return False
+
+    def _run_terminal_handlers(
+        self, handlers: List[List[str]], filepath: str
+    ) -> bool:
+        if not handlers:
+            return False
+
+        for raw_cmd in handlers:
+            if not raw_cmd:
+                continue
+            tokens: List[str] = []
+            for part in raw_cmd:
+                if not isinstance(part, str):
+                    continue
+                tokens.append(part.replace("{file}", filepath))
+            if not tokens:
+                continue
+            if "{file}" not in "".join(raw_cmd):
+                tokens.append(filepath)
+
+            if self.nav.open_terminal(None, tokens):
+                return True
 
         return False
 

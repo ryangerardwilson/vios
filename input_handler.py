@@ -331,7 +331,6 @@ class InputHandler:
     def _handle_command_mode_key(self, key: int) -> None:
         if key in (10, 13, curses.KEY_ENTER):
             command = self.nav.command_buffer.strip()
-            self.nav.command_mode = False
             self.nav.command_buffer = ""
             self._execute_command(command)
             return

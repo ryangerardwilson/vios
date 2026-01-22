@@ -870,6 +870,45 @@ def _enter_command_mode(handler: InputHandler):
     handler.handle_key(None, ord(":"))
 
 
+def test_parquet_viewer_launches_in_terminal(tmp_path):
+    parquet_file = tmp_path / "data.parquet"
+    parquet_file.write_bytes(b"PAR1")
+
+    class DummyConfig:
+        def __init__(self, mapping):
+            self.mapping = mapping
+
+        def get_handler_commands(self, name):
+            return self.mapping.get(name, [])
+
+    class DummyDirManager:
+        def __init__(self, path):
+            self.current_path = path
+
+    class DummyNav:
+        def __init__(self):
+            self.config = DummyConfig(
+                {"parquet_viewer": [["alacritty", "-e", "vixl"]]}
+            )
+            self.renderer = SimpleNamespace(stdscr=None)
+            self.status_message = ""
+            self.need_redraw = False
+            self.dir_manager = DummyDirManager(str(tmp_path))
+            self.terminal_calls = []
+
+        def open_terminal(self, base_path=None, command=None):
+            self.terminal_calls.append((base_path, command))
+            return True
+
+    nav = DummyNav()
+    service = FileActionService(nav)
+    service.open_file(str(parquet_file))
+
+    assert nav.terminal_calls
+    base_path, command = nav.terminal_calls[0]
+    assert command[-1] == str(parquet_file)
+
+
 def test_command_mode_shell_creates_file(tmp_path):
     nav = FileNavigator(str(tmp_path))
     handler = nav.input_handler
@@ -882,6 +921,9 @@ def test_command_mode_shell_creates_file(tmp_path):
     target = tmp_path / "cmd_test.txt"
     assert target.exists()
     assert "exit 0" in nav.status_message
+    assert nav.command_mode
+
+    handler.handle_key(None, 27)
     assert not nav.command_mode
 
 
@@ -895,6 +937,9 @@ def test_command_mode_unknown_command(tmp_path):
     handler.handle_key(None, 10)
 
     assert "unknown command" in nav.status_message.lower()
+    assert nav.command_mode
+
+    handler.handle_key(None, 27)
     assert not nav.command_mode
 
 
@@ -976,3 +1021,4 @@ def test_e_collapse_positions_cursor(tmp_path):
 
     assert nav.browser_selected == 0
     assert "collapsed" in nav.status_message.lower()
+from file_actions import FileActionService

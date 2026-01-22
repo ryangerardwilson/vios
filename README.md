@@ -227,8 +227,9 @@ Supported options:
   - Each sub-array represents a command to try (with optional arguments). If a
     command does **not** include `{file}`, the file path is appended.
   - `pdf_viewer` and `image_viewer` control the viewers for PDFs and images.
-  - `csv_viewer` and `parquet_viewer` allow you to specify dedicated viewers for
-    CSV/Parquet data files.
+  - `csv_viewer` and `parquet_viewer` run inside a fresh external terminal. Be
+    sure to configure terminal-friendly commands (CLI tools or wrappers like
+    `alacritty -e my-viewer`).
   - `editor` (optional) overrides the fallback editor used for other files.
 - `file_shortcuts` — map custom tokens (lowercase alphanumeric) to specific files (absolute paths or with `~`).
   Trigger them with `,fo<token>` to open PDFs, images, or any file using your configured handlers (e.g. `,fo1`, `,fokr`).
@@ -335,7 +336,8 @@ to your own tools and directory structure:
     location.
   - `analysis` runs a code editor pointed at your project and opens LibreOffice
     with a dataset in a separate terminal. Each entry accepts either a direct
-    path or an array describing a command.
+    path or an array describing a command (CSV/Parquet commands launch in a
+    terminal automatically).
 
 Feel free to swap out the sample applications (Evince, Feh, LibreOffice, etc.)
 with whatever viewers and editors you have installed.
