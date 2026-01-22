@@ -78,6 +78,9 @@ class UIRenderer:
         else:
             self._render_list(stdscr, max_y, max_x)
 
+        if getattr(self.nav, "command_popup_visible", False):
+            self._render_command_popup(stdscr, max_y, max_x)
+
         stdscr.refresh()
 
     # ------------------------------------------------------------------
@@ -173,6 +176,121 @@ class UIRenderer:
 
         return "  ".join(parts)
 
+    def _render_command_popup(self, stdscr: Any, max_y: int, max_x: int) -> None:
+        lines = getattr(self.nav, "command_popup_lines", []) or ["(no output)"]
+        header = getattr(self.nav, "command_popup_header", "Command Output")
+        total_lines = len(lines)
+        if total_lines == 0:
+            lines = ["(no output)"]
+            total_lines = 1
+
+        def _render_compact() -> None:
+            visible_rows = max(1, max_y - 1)
+            max_scroll = max(0, total_lines - visible_rows)
+            scroll = max(0, min(getattr(self.nav, "command_popup_scroll", 0), max_scroll))
+            self.nav.command_popup_scroll = scroll
+            self.nav.command_popup_view_rows = visible_rows
+            visible = lines[scroll : scroll + visible_rows]
+
+            for row in range(visible_rows):
+                if row >= max_y - 1:
+                    break
+                try:
+                    stdscr.move(row, 0)
+                    stdscr.clrtoeol()
+                    if row < len(visible):
+                        stdscr.addstr(row, 0, visible[row][:max_x])
+                except curses.error:
+                    pass
+
+            footer = (
+                f"{header}  [{scroll + 1}-{min(total_lines, scroll + visible_rows)}/{total_lines}]"
+                "  j/k scroll  ESC close"
+            )
+            self._render_status_bar(stdscr, footer, max_y, max_x, bold=False)
+
+        if max_y < 5 or max_x < 20:
+            _render_compact()
+            return
+
+        top = 1
+        bottom = max_y - 2
+        left = 2
+        right = max_x - 3
+
+        if bottom - top < 4 or right - left < 6:
+            _render_compact()
+            return
+
+        width = right - left + 1
+        height = bottom - top + 1
+
+        horizontal = "-" * (width - 2)
+        try:
+            stdscr.addstr(top, left, "+" + horizontal + "+")
+        except curses.error:
+            pass
+
+        for row in range(top + 1, bottom):
+            try:
+                stdscr.addstr(row, left, "|")
+                stdscr.addstr(row, right, "|")
+                stdscr.addstr(row, left + 1, " " * (width - 2))
+            except curses.error:
+                pass
+
+        try:
+            stdscr.addstr(bottom, left, "+" + horizontal + "+")
+        except curses.error:
+            pass
+
+        header_y = top + 1
+        footer_y = bottom - 1
+        content_top = header_y + 1
+        content_bottom = footer_y - 1
+
+        visible_rows = content_bottom - content_top + 1
+        if visible_rows < 1:
+            _render_compact()
+            return
+
+        max_scroll = max(0, total_lines - visible_rows)
+        scroll = max(0, min(getattr(self.nav, "command_popup_scroll", 0), max_scroll))
+        self.nav.command_popup_scroll = scroll
+        self.nav.command_popup_view_rows = visible_rows
+        visible = lines[scroll : scroll + visible_rows]
+
+        line_info = f"{scroll + 1}-{min(total_lines, scroll + visible_rows)}/{total_lines}"
+
+        header_width = max(0, width - 2)
+        try:
+            stdscr.addstr(header_y, left + 1, " " * header_width)
+            stdscr.addstr(header_y, left + 2, header[: max(0, width - 4)])
+            info_x = right - len(line_info) - 1
+            if info_x > left + 1:
+                stdscr.addstr(header_y, info_x, line_info[: max(0, width - 4)])
+        except curses.error:
+            pass
+
+        instructions = "j/k scroll  ESC close"
+        try:
+            stdscr.addstr(footer_y, left + 1, " " * header_width)
+            stdscr.addstr(footer_y, left + 2, instructions[: max(0, width - 4)])
+        except curses.error:
+            pass
+
+        inner_width = max(0, width - 4)
+        for idx in range(visible_rows):
+            y = content_top + idx
+            text = visible[idx] if idx < len(visible) else ""
+            try:
+                stdscr.addstr(y, left + 1, " " * (width - 2))
+                stdscr.addstr(y, left + 2, text[:inner_width])
+            except curses.error:
+                pass
+
+        footer = f"{header}  [{line_info}]  j/k scroll  ESC close"
+        self._render_status_bar(stdscr, footer, max_y, max_x, bold=False)
     # ------------------------------------------------------------------
     # Help view
 

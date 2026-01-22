@@ -169,7 +169,7 @@ modal file browser without leaving the terminal.
 - Press `:` to enter command mode.
 - Run shell commands with `:!<command>` (executed in the directory you've navigated to).
 - `Enter` runs the command; `Esc` cancels.
-- After a `:!` command finishes, its output stays visible until you press `Esc`.
+- Command output appears in a popup; use `j` / `k` to scroll and `Esc` to close.
 
 ### Open Terminal
 

@@ -4,10 +4,6 @@ import os
 import time
 import shutil
 import subprocess
-import sys
-import termios
-import tty
-import select
 from typing import List
 
 
@@ -408,38 +404,55 @@ class InputHandler:
         self.command_cwd = None
 
     def _run_shell_command(self, shell_cmd: str) -> None:
-        stdscr_opt = getattr(self.nav.renderer, "stdscr", None)
-        suspended = False
-        if stdscr_opt is not None:
-            try:
-                curses.def_prog_mode()
-            except curses.error:
-                pass
-            try:
-                curses.endwin()
-            except curses.error:
-                pass
-            suspended = True
-
         cwd_candidate = self.command_cwd or self.nav.dir_manager.current_path
         cwd = os.path.realpath(cwd_candidate)
         if not os.path.isdir(cwd):
             cwd = self.nav.dir_manager.current_path
+
         return_code = None
+        stdout_text = ""
+        stderr_text = ""
         error_message = ""
 
         try:
-            result = subprocess.run(shell_cmd, shell=True, cwd=cwd)
+            result = subprocess.run(
+                shell_cmd,
+                shell=True,
+                cwd=cwd,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+            )
             return_code = result.returncode
+            stdout_text = result.stdout or ""
+            stderr_text = result.stderr or ""
         except Exception as exc:  # pragma: no cover
             error_message = str(exc)
+
+        lines: list[str] = []
+
+        if stdout_text:
+            lines.extend(stdout_text.splitlines())
+            if stdout_text.endswith("\n"):
+                lines.append("")
+
+        if stderr_text:
+            if lines and lines[-1] != "":
+                lines.append("")
+            lines.append("[stderr]")
+            lines.extend(stderr_text.splitlines())
+            if stderr_text.endswith("\n"):
+                lines.append("")
 
         message = ""
         should_flash = False
         notify_dirs = False
 
         if return_code is None:
-            message = f"! {shell_cmd} failed: {error_message}"
+            message = f"! {shell_cmd} failed: {error_message or 'unknown error'}"
+            if not lines:
+                lines = [error_message or "(no output)"]
             should_flash = True
         else:
             message = f"! {shell_cmd} (exit {return_code})"
@@ -447,57 +460,25 @@ class InputHandler:
                 notify_dirs = True
             else:
                 should_flash = True
+            if not lines:
+                lines = ["(no output)"]
 
-        waited = False
-        if sys.stdin.isatty():
-            print(f"\n{message}", flush=True)
-            print("Press ESC to return to o...", flush=True)
-            self._wait_for_escape_key()
-            waited = True
-
-        if suspended and stdscr_opt is not None:
-            try:
-                curses.reset_prog_mode()
-            except curses.error:
-                pass
-            try:
-                curses.curs_set(0)
-            except curses.error:
-                pass
-            try:
-                stdscr_opt.refresh()
-            except Exception:
-                pass
+        self.nav.command_popup_lines = lines
+        self.nav.command_popup_header = message
+        self.nav.command_popup_scroll = 0
+        self.nav.command_popup_view_rows = 0
+        self.nav.command_popup_visible = True
 
         if notify_dirs and hasattr(self.nav, "notify_directory_changed"):
             self.nav.notify_directory_changed()
 
-        if should_flash and (not sys.stdin.isatty() or not waited):
+        if should_flash:
             self._flash()
 
         self.nav.command_mode = False
         self.nav.status_message = message
         self.nav.need_redraw = True
         self.command_cwd = None
-
-    def _wait_for_escape_key(self) -> None:
-        stdin = sys.stdin
-        if not stdin.isatty():
-            return
-
-        fd = stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setcbreak(fd)
-            while True:
-                ready, _, _ = select.select([stdin], [], [], None)
-                if not ready:
-                    continue
-                ch = stdin.read(1)
-                if ch == "\x1b" or ch == "":
-                    break
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
     def _run_workspace_commands(
         self, commands: List[List[str]], *, background: bool
@@ -764,12 +745,64 @@ class InputHandler:
 
         return False
 
+    def _handle_command_popup_key(self, key) -> bool:
+        lines = getattr(self.nav, "command_popup_lines", []) or []
+        visible = max(1, getattr(self.nav, "command_popup_view_rows", 1))
+        max_scroll = max(0, len(lines) - visible)
+
+        if key in (27, ord("q")):
+            self._close_command_popup()
+            return True
+
+        if key in (ord("j"), curses.KEY_DOWN):
+            new_scroll = min(max_scroll, self.nav.command_popup_scroll + 1)
+            if new_scroll != self.nav.command_popup_scroll:
+                self.nav.command_popup_scroll = new_scroll
+                self.nav.need_redraw = True
+            return True
+
+        if key in (ord("k"), curses.KEY_UP):
+            new_scroll = max(0, self.nav.command_popup_scroll - 1)
+            if new_scroll != self.nav.command_popup_scroll:
+                self.nav.command_popup_scroll = new_scroll
+                self.nav.need_redraw = True
+            return True
+
+        if key in (curses.KEY_NPAGE,):
+            new_scroll = min(max_scroll, self.nav.command_popup_scroll + visible)
+            if new_scroll != self.nav.command_popup_scroll:
+                self.nav.command_popup_scroll = new_scroll
+                self.nav.need_redraw = True
+            return True
+
+        if key in (curses.KEY_PPAGE,):
+            new_scroll = max(0, self.nav.command_popup_scroll - visible)
+            if new_scroll != self.nav.command_popup_scroll:
+                self.nav.command_popup_scroll = new_scroll
+                self.nav.need_redraw = True
+            return True
+
+        return True
+
+    def _close_command_popup(self) -> None:
+        self.nav.command_popup_visible = False
+        self.nav.command_popup_lines = []
+        self.nav.command_popup_header = ""
+        self.nav.command_popup_scroll = 0
+        self.nav.command_popup_view_rows = 0
+        self.nav.status_message = ""
+        self.nav.need_redraw = True
+
     def _key_to_char(self, key):
         if 32 <= key <= 126:
             return chr(key)
         return None
 
     def handle_key(self, stdscr, key):
+        if getattr(self.nav, "command_popup_visible", False):
+            if self._handle_command_popup_key(key):
+                return False
+
         self.nav.status_message = ""
         if self.nav.show_help:
             handled = self._handle_help_scroll(key, stdscr)

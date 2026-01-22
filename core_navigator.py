@@ -51,6 +51,12 @@ class FileNavigator:
         self.command_mode = False
         self.command_buffer = ""
 
+        self.command_popup_visible = False
+        self.command_popup_lines: List[str] = []
+        self.command_popup_header = ""
+        self.command_popup_scroll = 0
+        self.command_popup_view_rows = 0
+
         if self.config.warnings and not self.status_message:
             self.status_message = self.config.warnings[0]
 

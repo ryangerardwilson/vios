@@ -972,6 +972,8 @@ def test_command_mode_shell_creates_file(tmp_path):
     assert target.exists()
     assert "exit 0" in nav.status_message
     assert not nav.command_mode
+    assert nav.command_popup_visible
+    assert nav.command_popup_lines == ["(no output)"]
 
 
 def test_command_mode_unknown_command(tmp_path):
@@ -1016,11 +1018,9 @@ def test_command_mode_runs_in_current_directory(tmp_path):
     )
     nav.browser_selected = sub_index
 
-    mock_result = SimpleNamespace(returncode=0)
+    mock_result = SimpleNamespace(returncode=0, stdout="done\n", stderr="")
 
-    with patch("input_handler.subprocess.run", return_value=mock_result) as mock_run, patch(
-        "input_handler.sys.stdin.isatty", return_value=False
-    ):
+    with patch("input_handler.subprocess.run", return_value=mock_result) as mock_run:
         handler.handle_key(None, ord(":"))
         for ch in "!pwd":
             handler.handle_key(None, ord(ch))
@@ -1029,6 +1029,28 @@ def test_command_mode_runs_in_current_directory(tmp_path):
     assert mock_run.called
     assert mock_run.call_args.kwargs.get("cwd") == os.path.realpath(str(root))
     assert handler.command_cwd is None
+    assert nav.command_popup_visible
+    assert nav.command_popup_lines[:1] == ["done"]
+
+
+def test_command_popup_scroll_and_close(tmp_path):
+    nav = FileNavigator(str(tmp_path))
+    handler = nav.input_handler
+
+    nav.command_popup_visible = True
+    nav.command_popup_lines = [f"line {i}" for i in range(10)]
+    nav.command_popup_view_rows = 3
+    nav.command_popup_scroll = 0
+
+    handler.handle_key(None, ord("j"))
+    assert nav.command_popup_scroll == 1
+
+    handler.handle_key(None, ord("k"))
+    assert nav.command_popup_scroll == 0
+
+    handler.handle_key(None, 27)
+    assert not nav.command_popup_visible
+    assert nav.command_popup_lines == []
 
 
 def _make_nested_items(parent_path: str, child_name: str):
