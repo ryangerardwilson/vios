@@ -709,24 +709,57 @@ def test_directory_shortcut_opens_terminal_without_nav_change(tmp_path):
     assert "terminal" in nav.status_message.lower()
 
 
-def test_directory_shortcut_change_and_terminal(tmp_path):
-    target_dir = tmp_path / "work"
-    target_dir.mkdir()
+def test_workspace_shortcut_opens_internal_and_external(tmp_path):
+    internal_file = tmp_path / "Bible.md"
+    internal_file.write_text("In the beginning")
+    external_file = tmp_path / "KJV.pdf"
+    external_file.write_text("pdf bytes")
 
     nav = DummyNavigator([], str(tmp_path))
-    nav.config.dir_shortcuts = {"wk": os.path.realpath(str(target_dir))}
+    nav.config.workspace_shortcuts = {
+        "1": {
+            "internal": os.path.realpath(str(internal_file)),
+            "external": os.path.realpath(str(external_file)),
+        }
+    }
     handler = InputHandler(nav)
 
     handler.pending_comma = True
     handler.comma_sequence = ""
     handler._handle_comma_command(
-        ord("d"), 0, None, None, None, nav.dir_manager.current_path
+        ord("w"), 0, None, None, None, nav.dir_manager.current_path
     )
     handler._handle_comma_command(
-        ord("t"), 0, None, None, None, nav.dir_manager.current_path
+        ord("1"), 0, None, None, None, nav.dir_manager.current_path
     )
+
+    expected_paths = [
+        os.path.realpath(str(external_file)),
+        os.path.realpath(str(internal_file)),
+    ]
+    assert nav.opened_paths == expected_paths
+    assert "workspace" in nav.status_message.lower()
+
+
+def test_workspace_shortcut_directory_and_external_dir(tmp_path):
+    internal_dir = tmp_path / "workspace"
+    internal_dir.mkdir()
+    external_dir = tmp_path / "logs"
+    external_dir.mkdir()
+
+    nav = DummyNavigator([], str(tmp_path))
+    nav.config.workspace_shortcuts = {
+        "wk": {
+            "internal": os.path.realpath(str(internal_dir)),
+            "external": os.path.realpath(str(external_dir)),
+        }
+    }
+    handler = InputHandler(nav)
+
+    handler.pending_comma = True
+    handler.comma_sequence = ""
     handler._handle_comma_command(
-        ord("o"), 0, None, None, None, nav.dir_manager.current_path
+        ord("w"), 0, None, None, None, nav.dir_manager.current_path
     )
     handler._handle_comma_command(
         ord("w"), 0, None, None, None, nav.dir_manager.current_path
@@ -735,10 +768,38 @@ def test_directory_shortcut_change_and_terminal(tmp_path):
         ord("k"), 0, None, None, None, nav.dir_manager.current_path
     )
 
-    assert nav.dir_manager.current_path == os.path.realpath(str(target_dir))
-    assert nav.changed_dirs[-1] == os.path.realpath(str(target_dir))
-    assert nav.terminal_calls == [os.path.realpath(str(target_dir))]
-    assert "terminal" in nav.status_message.lower()
+    real_internal = os.path.realpath(str(internal_dir))
+    real_external = os.path.realpath(str(external_dir))
+    assert nav.dir_manager.current_path == real_internal
+    assert real_internal in nav.changed_dirs
+    assert nav.terminal_calls == [real_external]
+    assert "workspace" in nav.status_message.lower()
+
+
+def test_workspace_shortcut_missing_paths(tmp_path):
+    internal_file = tmp_path / "notes.md"
+    internal_file.write_text("hello")
+
+    nav = DummyNavigator([], str(tmp_path))
+    nav.config.workspace_shortcuts = {
+        "x": {"internal": os.path.realpath(str(internal_file))}
+    }
+    handler = InputHandler(nav)
+
+    internal_file.unlink()
+
+    handler.pending_comma = True
+    handler.comma_sequence = ""
+    handler._handle_comma_command(
+        ord("w"), 0, None, None, None, nav.dir_manager.current_path
+    )
+    handler._handle_comma_command(
+        ord("x"), 0, None, None, None, nav.dir_manager.current_path
+    )
+
+    assert nav.opened_paths == []
+    assert nav.changed_dirs == []
+    assert "unavailable" in nav.status_message.lower()
 
 
 def _make_nested_items(parent_path: str, child_name: str):

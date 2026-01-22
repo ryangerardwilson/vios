@@ -11,6 +11,7 @@ class UserConfig:
     handlers: Dict[str, List[List[str]]] = field(default_factory=dict)
     file_shortcuts: Dict[str, str] = field(default_factory=dict)
     dir_shortcuts: Dict[str, str] = field(default_factory=dict)
+    workspace_shortcuts: Dict[str, Dict[str, str]] = field(default_factory=dict)
     warnings: List[str] = field(default_factory=list)
 
     def get_handler_commands(self, name: str) -> List[List[str]]:
@@ -144,6 +145,71 @@ def _normalize_dir_shortcuts(raw_shortcuts) -> Tuple[Dict[str, str], List[str]]:
     return shortcuts, warnings
 
 
+def _normalize_workspace_shortcuts(
+    raw_shortcuts,
+) -> Tuple[Dict[str, Dict[str, str]], List[str]]:
+    shortcuts: Dict[str, Dict[str, str]] = {}
+    warnings: List[str] = []
+
+    if not isinstance(raw_shortcuts, dict):
+        return shortcuts, warnings
+
+    for raw_key, raw_value in raw_shortcuts.items():
+        if not isinstance(raw_key, str):
+            warnings.append("workspace_shortcuts key ignored (not a string)")
+            continue
+
+        token = raw_key.strip().lower()
+        if not token:
+            warnings.append("workspace_shortcuts entry ignored (empty key)")
+            continue
+
+        if not token.isalnum():
+            warnings.append(
+                f"workspace_shortcuts key '{raw_key}' ignored (use alphanumeric tokens)"
+            )
+            continue
+
+        if not isinstance(raw_value, dict):
+            warnings.append(
+                f"workspace_shortcuts '{raw_key}' ignored (expected object with paths)"
+            )
+            continue
+
+        normalized_entry: Dict[str, str] = {}
+
+        for label in ("internal", "external"):
+            candidate = raw_value.get(label)
+            if candidate is None:
+                continue
+            if not isinstance(candidate, str):
+                warnings.append(
+                    f"workspace_shortcuts '{raw_key}' {label} ignored (not a string)"
+                )
+                continue
+            path = _normalize_path(candidate)
+            if not path:
+                warnings.append(
+                    f"workspace_shortcuts '{raw_key}' {label} ignored (empty path)"
+                )
+                continue
+            if not os.path.exists(path):
+                warnings.append(
+                    f"workspace_shortcuts '{raw_key}' {label} ignored ({path} missing)"
+                )
+                continue
+            normalized_entry[label] = path
+
+        if normalized_entry:
+            shortcuts[token] = normalized_entry
+        else:
+            warnings.append(
+                f"workspace_shortcuts '{raw_key}' ignored (no valid paths)"
+            )
+
+    return shortcuts, warnings
+
+
 def load_user_config() -> UserConfig:
     path = _config_path()
     data = {}
@@ -169,13 +235,18 @@ def load_user_config() -> UserConfig:
         data.get("dir_shortcuts", {})
     )
 
-    warnings = file_warnings + dir_warnings
+    workspace_shortcuts, workspace_warnings = _normalize_workspace_shortcuts(
+        data.get("workspace_shortcuts", {})
+    )
+
+    warnings = file_warnings + dir_warnings + workspace_warnings
 
     return UserConfig(
         matrix_mode=matrix_mode,
         handlers=handlers,
         file_shortcuts=file_shortcuts,
         dir_shortcuts=dir_shortcuts,
+        workspace_shortcuts=workspace_shortcuts,
         warnings=warnings,
     )
 

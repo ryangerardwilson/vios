@@ -125,7 +125,6 @@ class InputHandler:
             for command_key, change_dir, open_term in (
                 (f"do{token}", True, False),
                 (f"to{token}", False, True),
-                (f"dto{token}", True, True),
             ):
                 if command_key in command_map:
                     continue
@@ -140,6 +139,17 @@ class InputHandler:
                         command_prefix=prefix,
                     )
                 )
+
+        workspace_shortcuts = getattr(self.nav.config, "workspace_shortcuts", {}) or {}
+        for token in sorted(workspace_shortcuts):
+            command_key = f"w{token}"
+            if command_key in command_map:
+                continue
+            command_map[command_key] = (
+                lambda shortcut_token=token, prefix=command_key: self._invoke_workspace_shortcut(
+                    shortcut_token, command_prefix=prefix
+                )
+            )
 
         if command in command_map:
             command_map[command]()
@@ -357,6 +367,76 @@ class InputHandler:
             self.nav.status_message = f"Jumped to {pretty}"
         elif open_terminal:
             self.nav.status_message = f"Opened terminal at {pretty}"
+
+        self.nav.need_redraw = True
+
+    def _invoke_workspace_shortcut(self, token: str, *, command_prefix: str) -> None:
+        shortcuts = getattr(self.nav.config, "workspace_shortcuts", {}) or {}
+        entry = shortcuts.get(token)
+
+        command = f",{command_prefix}"
+        if not entry:
+            self.nav.status_message = (
+                f"No workspace shortcut configured for {command}"
+            )
+            self.nav.need_redraw = True
+            self._flash()
+            return
+
+        fragments = []
+        issues = []
+        success = False
+
+        internal_path = entry.get("internal")
+        external_path = entry.get("external")
+
+        if external_path:
+            if not os.path.exists(external_path):
+                issues.append(
+                    f"external missing {os.path.basename(external_path) or external_path}"
+                )
+            elif os.path.isdir(external_path):
+                self.nav.open_terminal(external_path)
+                pretty = os.path.basename(external_path.rstrip(os.sep)) or external_path
+                fragments.append(f"terminal at {pretty}")
+                success = True
+            else:
+                self.nav.open_file(external_path)
+                fragments.append(
+                    f"external {os.path.basename(external_path) or external_path}"
+                )
+                success = True
+
+        if internal_path:
+            if not os.path.exists(internal_path):
+                issues.append(
+                    f"internal missing {os.path.basename(internal_path) or internal_path}"
+                )
+            elif os.path.isdir(internal_path):
+                if self.nav.change_directory(internal_path):
+                    pretty = os.path.basename(internal_path.rstrip(os.sep)) or internal_path
+                    fragments.append(f"jumped to {pretty}")
+                    success = True
+                else:
+                    issues.append(
+                        f"failed to enter {os.path.basename(internal_path) or internal_path}"
+                    )
+            else:
+                self.nav.open_file(internal_path)
+                fragments.append(
+                    f"opened {os.path.basename(internal_path) or internal_path}"
+                )
+                success = True
+
+        if success:
+            message = f"Workspace {command}: " + "; ".join(fragments)
+            if issues:
+                message += f" (issues: {'; '.join(issues)})"
+            self.nav.status_message = message
+        else:
+            issue_text = "; ".join(issues) if issues else "no actions available"
+            self.nav.status_message = f"Workspace {command} unavailable ({issue_text})"
+            self._flash()
 
         self.nav.need_redraw = True
 

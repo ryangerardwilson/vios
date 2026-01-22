@@ -5,9 +5,19 @@
     "image_viewer": [["swayimg"]]
   },
   "file_shortcuts": {
-    "notes": "~/Notes/daily_planner.pdf"
+    "1": "~/Documents/books/1611_king_james_the_holy_bible.pdf",
+    "2": "~/Bible.md",
+    "kr": "~/Documents/books/1988_kernighan_ritchie_the_c_programming_language.pdf"
   },
   "dir_shortcuts": {
-    "ga": "~/Apps/genie_allocation"
+    "ga": "~/Apps/genie_allocation",
+    "gs": "~/Apps/genie_serviceability",
+    "r": "~/Apps/r"
+  },
+  "workspace_shortcuts": {
+    "1": {
+      "internal": "~/Bible.md",
+      "external": "~/Documents/books/1611_king_james_the_holy_bible.pdf"
+    }
   }
 }

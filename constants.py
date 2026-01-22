@@ -66,7 +66,7 @@ Leader Commands (prefix ",")
   ,fo<token>       Open configured file shortcuts (e.g. ,fonotes)
   ,do<token>      Jump to directory shortcut (e.g. ,doga)
   ,to<token>      Open terminal at shortcut directory (e.g. ,toga)
-  ,dto<token>     Jump + open terminal at shortcut directory (e.g. ,dtoga)
+  ,w<token>       Launch workspace shortcut (e.g. ,w1)
   ,cp             Copy cd command to dir path to clipboard
   ,cl             Clear clipboard
 """

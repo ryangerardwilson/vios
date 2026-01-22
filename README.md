@@ -84,7 +84,7 @@ python main.py
   - `,fo<token>` — Open configured file shortcut (e.g. `,fonotes`)
   - `,do<token>` — Jump to directory shortcut (e.g. `,doga`)
   - `,to<token>` — Open external terminal at shortcut directory (e.g. `,toga`)
-  - `,dto<token>` — Jump to directory and open a terminal there (e.g. `,dtoga`)
+  - `,w<token>` — Launch workspace shortcut (open internal + external targets)
   - `,cp` — Copy `cd` command for current path to system clipboard
   - `,cl` — Clear clipboard contents
   - `,cm` — Clear all marks
@@ -228,11 +228,13 @@ Supported options:
   - `pdf_viewer` and `image_viewer` control the viewers for PDFs and images.
   - `editor` (optional) overrides the fallback editor used for other files.
 - `file_shortcuts` — map custom tokens (lowercase alphanumeric) to specific files (absolute paths or with `~`).
-  Trigger them with `,fo<token>` to open PDFs, images, or any file using your configured handlers (e.g. `,fonotes`).
+  Trigger them with `,fo<token>` to open PDFs, images, or any file using your configured handlers (e.g. `,fo1`, `,fokr`).
 - `dir_shortcuts` — map custom tokens (alphanumeric) to directories. Trigger with:
   - `,do<token>` to jump inside the directory (e.g. `,doga` → `~/Apps/genie_allocation`)
   - `,to<token>` to launch an external terminal at the directory without changing focus.
-  - `,dto<token>` to jump and launch a terminal.
+- `workspace_shortcuts` — map tokens to an object with optional `internal` and
+  `external` paths. Trigger with `,w<token>` to open both targets (internal is 
+  opened within `o`, external launches via configured handlers/terminal).
 
 If a handler command or mapping is missing, `o` simply leaves the file
 unopened. Configure viewers/editors explicitly to control how files launch.
@@ -247,12 +249,20 @@ Reference template (`template_config.json`):
     "image_viewer": [["swayimg"]]
   },
   "file_shortcuts": {
-    "notes": "~/Notes/daily_planner.pdf",
-    "dash": "~/Pictures/dashboard.png"
+    "1": "~/Documents/books/1611_king_james_the_holy_bible.pdf",
+    "2": "~/Bible.md",
+    "kr": "~/Documents/books/1988_kernighan_ritchie_the_c_programming_language.pdf"
   },
   "dir_shortcuts": {
     "ga": "~/Apps/genie_allocation",
-    "dot": "~/.config"
+    "gs": "~/Apps/genie_serviceability",
+    "r": "~/Apps/r"
+  },
+  "workspace_shortcuts": {
+    "1": {
+      "internal": "~/Bible.md",
+      "external": "~/Documents/books/1611_king_james_the_holy_bible.pdf"
+    }
   }
 }
 ```
