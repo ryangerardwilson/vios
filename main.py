@@ -56,7 +56,9 @@ def _run_upgrade() -> int:
     curl_rc = curl.wait()
 
     if curl_rc != 0:
-        stderr = curl.stderr.read().decode("utf-8", errors="replace") if curl.stderr else ""
+        stderr = (
+            curl.stderr.read().decode("utf-8", errors="replace") if curl.stderr else ""
+        )
         if stderr:
             sys.stderr.write(stderr)
         return curl_rc

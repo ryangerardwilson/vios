@@ -115,7 +115,9 @@ class FileActionService:
                             status = f"Unzipping {filename}: {i + 1}/{total}"
                             stdscr.move(max_y - 1, 0)
                             stdscr.clrtoeol()
-                            stdscr.addstr(max_y - 1, 0, status[: max_x - 1], curses.A_BOLD)
+                            stdscr.addstr(
+                                max_y - 1, 0, status[: max_x - 1], curses.A_BOLD
+                            )
                             stdscr.refresh()
             except Exception:
                 curses.flash()
@@ -132,15 +134,21 @@ class FileActionService:
                 handled = True
             elif mime_type == "application/pdf":
                 handled = self._run_external_handlers(
-                    self.nav.config.get_handler_commands("pdf_viewer"), filepath, background=True
+                    self.nav.config.get_handler_commands("pdf_viewer"),
+                    filepath,
+                    background=True,
                 )
             elif mime_type and mime_type.startswith("image/"):
                 handled = self._run_external_handlers(
-                    self.nav.config.get_handler_commands("image_viewer"), filepath, background=True
+                    self.nav.config.get_handler_commands("image_viewer"),
+                    filepath,
+                    background=True,
                 )
             else:
                 handled = self._run_external_handlers(
-                    self.nav.config.get_handler_commands("editor"), filepath, background=False
+                    self.nav.config.get_handler_commands("editor"),
+                    filepath,
+                    background=False,
                 )
         except FileNotFoundError:
             pass
@@ -170,7 +178,7 @@ class FileActionService:
                 tokens.append(part.replace("{file}", filepath))
             if not tokens:
                 continue
-            if "{file}" not in ''.join(raw_cmd):
+            if "{file}" not in "".join(raw_cmd):
                 tokens = tokens + [filepath]
 
             cmd_name = tokens[0]
@@ -377,7 +385,9 @@ class FileActionService:
             return
 
         self.nav.notify_directory_changed(parent_dir)
-        self.nav.status_message = f"Renamed to {unique_name}" if unique_name != selected_name else "Renamed"
+        self.nav.status_message = (
+            f"Renamed to {unique_name}" if unique_name != selected_name else "Renamed"
+        )
 
     def open_terminal(self):
         cwd = self.nav.dir_manager.current_path
@@ -386,7 +396,17 @@ class FileActionService:
         if term_env:
             commands.append(shlex.split(term_env))
         commands.extend(
-            [[cmd] for cmd in ("alacritty", "foot", "kitty", "wezterm", "gnome-terminal", "xterm")]
+            [
+                [cmd]
+                for cmd in (
+                    "alacritty",
+                    "foot",
+                    "kitty",
+                    "wezterm",
+                    "gnome-terminal",
+                    "xterm",
+                )
+            ]
         )
 
         for cmd in commands:

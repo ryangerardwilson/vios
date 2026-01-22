@@ -7,7 +7,6 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from input_handler import InputHandler
 from core_navigator import FileNavigator
-from orchestrator import Orchestrator
 
 
 class DummyClipboard:

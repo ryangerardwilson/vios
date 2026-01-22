@@ -103,7 +103,9 @@ class UIRenderer:
         except curses.error:
             pass
 
-    def _render_status_bar(self, stdscr: Any, text: str, max_y: int, max_x: int, *, bold: bool = True) -> None:
+    def _render_status_bar(
+        self, stdscr: Any, text: str, max_y: int, max_x: int, *, bold: bool = True
+    ) -> None:
         if max_y <= 0:
             return
         attr = curses.A_BOLD if bold else curses.A_NORMAL
@@ -134,7 +136,7 @@ class UIRenderer:
 
         if self.nav.dir_manager.filter_pattern:
             fp = self.nav.dir_manager.filter_pattern
-            parts.append(fp if fp.startswith('/') else '/' + fp)
+            parts.append(fp if fp.startswith("/") else "/" + fp)
 
         leader_seq = getattr(self.nav, "leader_sequence", "")
         if leader_seq:
@@ -258,7 +260,11 @@ class UIRenderer:
                 else:
                     exp_symbol = "  "
 
-                attr = curses.A_BOLD if global_idx == self.nav.browser_selected else curses.A_NORMAL
+                attr = (
+                    curses.A_BOLD
+                    if global_idx == self.nav.browser_selected
+                    else curses.A_NORMAL
+                )
                 if global_idx in visual_indices_set:
                     attr |= curses.A_REVERSE
 
@@ -318,7 +324,9 @@ class UIRenderer:
 
         if total == 0:
             self.nav.matrix_state = None
-            self._render_idle_matrix(stdscr, content_start_y, label_row, matrix_height, max_x)
+            self._render_idle_matrix(
+                stdscr, content_start_y, label_row, matrix_height, max_x
+            )
             status = self._compose_status(mode_indicator="[Matrix]")
             self._render_status_bar(stdscr, status, max_y, max_x, bold=False)
             return
@@ -330,13 +338,17 @@ class UIRenderer:
         delta = 0.0 if state.last_update == 0 else now - state.last_update
         state.last_update = now
 
-        selected_index = 0 if total == 0 else max(0, min(self.nav.browser_selected, total - 1))
+        selected_index = (
+            0 if total == 0 else max(0, min(self.nav.browser_selected, total - 1))
+        )
         if total > 0:
             self.nav.browser_selected = selected_index
 
         visual_indices: list[int] = []
         if getattr(self.nav, "visual_mode", False):
-            visual_indices = getattr(self.nav, "get_visual_indices", lambda _t: [])(total)
+            visual_indices = getattr(self.nav, "get_visual_indices", lambda _t: [])(
+                total
+            )
 
         paused_indices = set(visual_indices)
         paused_indices.add(selected_index)
@@ -392,7 +404,9 @@ class UIRenderer:
         status = self._compose_status(
             mode_indicator="[Matrix]",
             scroll_indicator=selection_indicator,
-            visual_count=len(visual_indices) if getattr(self.nav, "visual_mode", False) else 0,
+            visual_count=len(visual_indices)
+            if getattr(self.nav, "visual_mode", False)
+            else 0,
         )
         self._render_status_bar(stdscr, status, max_y, max_x, bold=False)
 
@@ -486,7 +500,9 @@ class UIRenderer:
             or state.max_width != max_x
             or not state.streams
         ):
-            columns = self._compute_columns(count, max_x) or [min(max_x - 1, i) for i in range(count)]
+            columns = self._compute_columns(count, max_x) or [
+                min(max_x - 1, i) for i in range(count)
+            ]
             length = max(32, matrix_height * 2)
             streams: list[IdleStream] = []
             for idx in range(count):
@@ -494,7 +510,9 @@ class UIRenderer:
                 velocity = random.uniform(4.0, 9.0)
                 head = random.uniform(0, matrix_height - 1 if matrix_height > 1 else 0)
                 chars = "".join(random.choice("01") for _ in range(length))
-                streams.append(IdleStream(column=column, velocity=velocity, head=head, chars=chars))
+                streams.append(
+                    IdleStream(column=column, velocity=velocity, head=head, chars=chars)
+                )
             state = IdleMatrixState(
                 streams=streams,
                 max_height=matrix_height,
@@ -520,7 +538,7 @@ class UIRenderer:
             stream.head = (stream.head + stream.velocity * delta) % matrix_height
             if len(stream.chars) < trail_length:
                 repeats = (trail_length // max(1, len(stream.chars))) + 2
-                stream.chars = (stream.chars * repeats)[: trail_length]
+                stream.chars = (stream.chars * repeats)[:trail_length]
             chars = stream.chars or "0"
             length = len(chars)
             col = max(0, min(max_x - 1, stream.column))

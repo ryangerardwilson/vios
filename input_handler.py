@@ -545,7 +545,9 @@ class InputHandler:
                 self._flash()
             finally:
                 self.nav.need_redraw = True
-                parent_dir = os.path.dirname(selected_path or self.nav.dir_manager.current_path)
+                parent_dir = os.path.dirname(
+                    selected_path or self.nav.dir_manager.current_path
+                )
                 self._notify_directories({parent_dir})
             return False
 
@@ -562,7 +564,9 @@ class InputHandler:
                     self.nav.clipboard.yank(
                         selected_path, selected_name, selected_is_dir, cut=True
                     )
-                    parent_dir = os.path.dirname(selected_path or self.nav.dir_manager.current_path)
+                    parent_dir = os.path.dirname(
+                        selected_path or self.nav.dir_manager.current_path
+                    )
                     self._notify_directories({parent_dir})
                     handled = True
                 except Exception:
@@ -751,7 +755,7 @@ class InputHandler:
         dest_dir_real = os.path.realpath(dest_dir)
         success = True
         source_dirs = set()
-        
+
         for full_path in list(self.nav.marked_items):
             if not os.path.exists(full_path):
                 success = False
