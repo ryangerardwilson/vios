@@ -921,9 +921,6 @@ def test_command_mode_shell_creates_file(tmp_path):
     target = tmp_path / "cmd_test.txt"
     assert target.exists()
     assert "exit 0" in nav.status_message
-    assert nav.command_mode
-
-    handler.handle_key(None, 27)
     assert not nav.command_mode
 
 
@@ -937,9 +934,6 @@ def test_command_mode_unknown_command(tmp_path):
     handler.handle_key(None, 10)
 
     assert "unknown command" in nav.status_message.lower()
-    assert nav.command_mode
-
-    handler.handle_key(None, 27)
     assert not nav.command_mode
 
 

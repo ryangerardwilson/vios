@@ -4,6 +4,10 @@ import os
 import time
 import shutil
 import subprocess
+import sys
+import termios
+import tty
+import select
 from typing import List
 
 
@@ -359,6 +363,7 @@ class InputHandler:
 
     def _execute_command(self, command: str) -> None:
         if not command:
+            self.nav.command_mode = False
             self.nav.status_message = "No command entered"
             self.nav.need_redraw = True
             return
@@ -366,6 +371,7 @@ class InputHandler:
         if command.startswith("!"):
             shell_cmd = command[1:].strip()
             if not shell_cmd:
+                self.nav.command_mode = False
                 self.nav.status_message = "Empty shell command"
                 self.nav.need_redraw = True
                 return
@@ -374,10 +380,12 @@ class InputHandler:
 
         self.nav.status_message = f"Unknown command: {command}"
         self._flash()
+        self.nav.command_mode = False
         self.nav.need_redraw = True
 
     def _run_shell_command(self, shell_cmd: str) -> None:
         stdscr_opt = getattr(self.nav.renderer, "stdscr", None)
+        suspended = False
         if stdscr_opt is not None:
             try:
                 curses.def_prog_mode()
@@ -387,6 +395,7 @@ class InputHandler:
                 curses.endwin()
             except curses.error:
                 pass
+            suspended = True
 
         cwd = self.nav.dir_manager.current_path
         return_code = None
@@ -397,36 +406,70 @@ class InputHandler:
             return_code = result.returncode
         except Exception as exc:  # pragma: no cover
             error_message = str(exc)
-        finally:
-            if stdscr_opt is not None:
-                try:
-                    curses.reset_prog_mode()
-                except curses.error:
-                    pass
-                try:
-                    curses.curs_set(0)
-                except curses.error:
-                    pass
-                try:
-                    stdscr_opt.refresh()
-                except Exception:
-                    pass
+
+        message = ""
+        should_flash = False
+        notify_dirs = False
 
         if return_code is None:
-            self.nav.status_message = f"! {shell_cmd} failed: {error_message}"
+            message = f"! {shell_cmd} failed: {error_message}"
+            should_flash = True
+        else:
+            message = f"! {shell_cmd} (exit {return_code})"
+            if return_code == 0:
+                notify_dirs = True
+            else:
+                should_flash = True
+
+        waited = False
+        if sys.stdin.isatty():
+            print(f"\n{message}", flush=True)
+            print("Press ESC to return to o...", flush=True)
+            self._wait_for_escape_key()
+            waited = True
+
+        if suspended and stdscr_opt is not None:
+            try:
+                curses.reset_prog_mode()
+            except curses.error:
+                pass
+            try:
+                curses.curs_set(0)
+            except curses.error:
+                pass
+            try:
+                stdscr_opt.refresh()
+            except Exception:
+                pass
+
+        if notify_dirs and hasattr(self.nav, "notify_directory_changed"):
+            self.nav.notify_directory_changed()
+
+        if should_flash and (not sys.stdin.isatty() or not waited):
             self._flash()
-            self.nav.need_redraw = True
+
+        self.nav.command_mode = False
+        self.nav.status_message = message
+        self.nav.need_redraw = True
+
+    def _wait_for_escape_key(self) -> None:
+        stdin = sys.stdin
+        if not stdin.isatty():
             return
 
-        if return_code == 0:
-            self.nav.status_message = f"! {shell_cmd} (exit 0)"
-            if hasattr(self.nav, "notify_directory_changed"):
-                self.nav.notify_directory_changed()
-        else:
-            self.nav.status_message = f"! {shell_cmd} (exit {return_code})"
-            self._flash()
-
-        self.nav.need_redraw = True
+        fd = stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setcbreak(fd)
+            while True:
+                ready, _, _ = select.select([stdin], [], [], None)
+                if not ready:
+                    continue
+                ch = stdin.read(1)
+                if ch == "\x1b" or ch == "":
+                    break
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
     def _run_workspace_commands(
         self, commands: List[List[str]], *, background: bool
