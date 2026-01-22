@@ -764,6 +764,7 @@ def test_browser_shortcut_opens_url():
 
 def test_browser_shortcut_missing_mapping():
     nav = DummyNavigator([], "/proj")
+    nav.config.browser_shortcuts = {"z": ""}
     handler = InputHandler(nav)
 
     handler.pending_comma = True
