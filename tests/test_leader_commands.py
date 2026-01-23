@@ -25,6 +25,7 @@ class DummyDirManager:
         self.sort_mode = "alpha"
         self.sort_map = {}
         self.home_path = os.path.realpath("/home/test")
+        self.show_hidden = False
 
     def set_sort_mode(self, mode: str):
         self.sort_mode = mode
@@ -35,6 +36,9 @@ class DummyDirManager:
     @staticmethod
     def pretty_path(path: str) -> str:
         return os.path.realpath(path)
+
+    def toggle_hidden(self):
+        self.show_hidden = not self.show_hidden
 
 
 class DummyNavigator:
@@ -1191,6 +1195,50 @@ def test_xd_collapse_positions_cursor(tmp_path):
 
     assert nav.browser_selected == 0
     assert "collapsed" in nav.status_message.lower()
+
+
+def test_leader_dot_toggles_hidden_and_clears_expansions():
+    items = [("docs", True, "/proj/docs", 0)]
+
+    nav = DummyNavigator(items, "/proj")
+    nav.expanded_nodes.add("/proj/docs")
+    handler = InputHandler(nav)
+
+    handler.handle_key(None, ord(","))
+    handler.handle_key(None, ord("d"))
+    handler.handle_key(None, ord("o"))
+    handler.handle_key(None, ord("t"))
+
+    assert nav.dir_manager.show_hidden
+    assert nav.expanded_nodes == set()
+    assert any(word in nav.status_message.lower() for word in ("dot", "hidden"))
+
+    handler.handle_key(None, ord(","))
+    handler.handle_key(None, ord("d"))
+    handler.handle_key(None, ord("o"))
+    handler.handle_key(None, ord("t"))
+
+    assert not nav.dir_manager.show_hidden
+
+
+def test_leader_xc_collapses_all_expansions():
+    nav = DummyNavigator([], "/proj")
+    nav.expanded_nodes.update({"/proj/src", "/proj/docs"})
+    handler = InputHandler(nav)
+
+    handler.handle_key(None, ord(","))
+    handler.handle_key(None, ord("x"))
+    handler.handle_key(None, ord("c"))
+
+    assert nav.expanded_nodes == set()
+    assert "collapsed" in nav.status_message.lower()
+    assert nav.need_redraw
+
+    handler.handle_key(None, ord(","))
+    handler.handle_key(None, ord("x"))
+    handler.handle_key(None, ord("c"))
+
+    assert "no expansions" in nav.status_message.lower()
 
 
 from file_actions import FileActionService

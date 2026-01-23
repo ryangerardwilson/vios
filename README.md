@@ -77,6 +77,8 @@ python main.py
   - `Enter` toggles between Matrix and list views at any time.
 - **Leader Commands (press `,` first)**
   - `,xd` — Toggle inline expansion/collapse for the selected item
+  - `,xc` — Collapse all inline expansions in the current view
+  - `,dot` — Toggle dotfile visibility
   - `,j` / `,k` — Jump to bottom/top instantly
   - `,sa` / `,sma` / `,smd` — Sorting shortcuts
   - `,nf` — Create new file (no open)
@@ -149,6 +151,7 @@ modal file browser without leaving the terminal.
 - `l`: Enter dir or open file.
 - `Ctrl+J` / `Ctrl+K`: Jump down/up quickly.
 - `,xd`: Toggle inline expansion/collapse for the selection.
+- `,xc`: Collapse all inline expansions while staying in the current directory.
 - `Ctrl+H` / `Ctrl+L`: Jump backward/forward through directory history.
 - `Esc`: Collapse inline expansions under the current directory.
 - `~`: Collapse all expansions and return to `~`.
@@ -188,6 +191,8 @@ modal file browser without leaving the terminal.
 ### Leader Commands (press `,` first)
 
 - ,xd: Toggle inline expansion/collapse for the current selection.
+- ,xc: Collapse all inline expansions.
+- ,dot: Toggle dotfile visibility.
 - ,j / ,k: Jump to bottom/top instantly.
 - ,sa / ,sma / ,smd: Sort alphabetically, by modified date ascending, or descending.
 - ,nf / ,nd: Create a new file / directory without opening it.

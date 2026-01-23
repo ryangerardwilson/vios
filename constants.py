@@ -57,13 +57,14 @@ Other
   ~               Collapse all expansions and return to ~
   c               Open config file in Vim
   t               Open terminal in current directory
-  .               Toggle show hidden files/dirs
   ?               Toggle this help
   q               Quit the app
   Ctrl+C          Quit immediately
 
 Leader Commands (press "," first)
   ,xd             Toggle inline expansion/collapse for selection
+  ,xc             Collapse all inline expansions
+  ,dot            Toggle dotfiles visibility
   ,k / ,j         Jump to top / bottom
   ,sa / ,sma / ,smd Sort alphabetically / modified ↑ / modified ↓
   ,nf / ,nd       Create new file / directory in context

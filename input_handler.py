@@ -110,6 +110,30 @@ class InputHandler:
 
         self.nav.need_redraw = True
 
+    def _toggle_hidden_files(self):
+        self.nav.exit_visual_mode()
+
+        toggle_fn = getattr(self.nav.dir_manager, "toggle_hidden", None)
+        if not callable(toggle_fn):
+            self._flash()
+            return
+
+        toggle_fn()
+        self.nav.expanded_nodes.clear()
+
+        status = "Showing dotfiles" if getattr(self.nav.dir_manager, "show_hidden", False) else "Hiding dotfiles"
+        self.nav.status_message = status
+        self.nav.need_redraw = True
+
+    def _collapse_all_expansions(self):
+        self.nav.exit_visual_mode()
+        if self.nav.expanded_nodes:
+            self.nav.expanded_nodes.clear()
+            self.nav.status_message = "Collapsed all expansions"
+        else:
+            self.nav.status_message = "No expansions to collapse"
+        self.nav.need_redraw = True
+
     def _handle_comma_command(
         self,
         key,
@@ -152,6 +176,8 @@ class InputHandler:
             "b": self._leader_bookmark,
             "cm": self._clear_marked_items,
             "xd": lambda: self._toggle_inline_expansion(selection, display_items),
+            "dot": self._toggle_hidden_files,
+            "xc": self._collapse_all_expansions,
         }
 
         file_shortcuts = getattr(self.nav.config, "file_shortcuts", {}) or {}
@@ -1148,12 +1174,6 @@ class InputHandler:
         if key == ord("?"):
             self.nav.show_help = True
             self.nav.help_scroll = 0
-            return False
-
-        if key == ord("."):
-            self.nav.exit_visual_mode()
-            self.nav.dir_manager.toggle_hidden()
-            self.nav.expanded_nodes.clear()
             return False
 
         if key == ord("c"):
