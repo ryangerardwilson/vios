@@ -6,6 +6,8 @@ import shutil
 import subprocess
 from typing import List
 
+from config import get_config_path
+
 
 class InputHandler:
     def __init__(self, navigator):
@@ -544,6 +546,41 @@ class InputHandler:
             self.nav.command_buffer = history[new_index]
         return True
 
+    def _open_user_config(self) -> None:
+        config_path = get_config_path()
+        if not config_path:
+            self.nav.status_message = "Config path unavailable"
+            self._flash()
+            self.nav.need_redraw = True
+            return
+
+        target_path = os.path.realpath(os.path.expanduser(config_path))
+
+        try:
+            directory = os.path.dirname(target_path)
+            if directory:
+                os.makedirs(directory, exist_ok=True)
+        except Exception:
+            self.nav.status_message = "Failed to prepare config directory"
+            self._flash()
+            self.nav.need_redraw = True
+            return
+
+        opened = False
+        try:
+            opened = self.nav.file_actions._open_with_vim(target_path)
+        except Exception:
+            opened = False
+
+        pretty = self.nav.dir_manager.pretty_path(target_path)
+        if opened:
+            self.nav.status_message = f"Opened {pretty} in vim"
+        else:
+            self.nav.status_message = "Unable to launch vim for config"
+            self._flash()
+
+        self.nav.need_redraw = True
+
     def _run_workspace_commands(
         self, commands: List[List[str]], *, background: bool
     ) -> bool:
@@ -1059,6 +1096,11 @@ class InputHandler:
             self.nav.exit_visual_mode()
             self.nav.dir_manager.toggle_hidden()
             self.nav.expanded_nodes.clear()
+            return False
+
+        if key == ord("c"):
+            self.nav.exit_visual_mode()
+            self._open_user_config()
             return False
 
         if key == ord("t"):

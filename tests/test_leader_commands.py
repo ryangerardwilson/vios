@@ -976,6 +976,30 @@ def test_command_mode_shell_creates_file(tmp_path):
     assert nav.command_popup_lines == ["(no output)"]
 
 
+def test_c_shortcut_opens_config_in_vim(tmp_path, monkeypatch):
+    config_file = tmp_path / "subdir" / "config.json"
+
+    monkeypatch.setattr("input_handler.get_config_path", lambda: str(config_file))
+
+    opened_paths = {}
+
+    def fake_open(self, path):  # noqa: ANN001
+        opened_paths["path"] = path
+        return True
+
+    monkeypatch.setattr("file_actions.FileActionService._open_with_vim", fake_open)
+
+    nav = FileNavigator(str(tmp_path))
+    handler = nav.input_handler
+
+    handler.handle_key(None, ord("c"))
+
+    assert config_file.parent.exists()
+    expected_path = os.path.realpath(str(config_file))
+    assert opened_paths["path"] == expected_path
+    assert "vim" in nav.status_message.lower()
+
+
 def test_command_history_navigation(tmp_path):
     nav = FileNavigator(str(tmp_path))
     handler = nav.input_handler
