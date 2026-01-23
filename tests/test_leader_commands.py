@@ -6,6 +6,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import config
+
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
@@ -979,12 +981,16 @@ def test_command_mode_shell_creates_file(tmp_path):
     assert nav.command_popup_lines == ["(no output)"]
 
 
-def test_c_shortcut_opens_config_in_vim(tmp_path, monkeypatch):
+def test_conf_leader_opens_config_and_reloads(tmp_path, monkeypatch):
     config_file = tmp_path / "subdir" / "config.json"
 
-    monkeypatch.setattr("input_handler.get_config_path", lambda: str(config_file))
-
     opened_paths = {}
+
+    def fake_get_config_path():
+        return str(config_file)
+
+    monkeypatch.setattr(config, "get_config_path", fake_get_config_path)
+    monkeypatch.setattr(config, "_config_path", lambda: str(config_file), raising=False)
 
     def fake_open(self, path):  # noqa: ANN001
         opened_paths["path"] = path
@@ -992,15 +998,33 @@ def test_c_shortcut_opens_config_in_vim(tmp_path, monkeypatch):
 
     monkeypatch.setattr("file_actions.FileActionService._open_with_vim", fake_open)
 
+    refreshed = config.UserConfig(matrix_mode=True, warnings=["test warning"])
+    load_calls = {"count": 0}
+
+    def fake_load_user_config():
+        load_calls["count"] += 1
+        return refreshed
+
+    monkeypatch.setattr(config, "load_user_config", fake_load_user_config)
+
+    original_config = config.USER_CONFIG
+    monkeypatch.setattr(config, "USER_CONFIG", original_config, raising=False)
+
     nav = FileNavigator(str(tmp_path))
     handler = nav.input_handler
 
-    handler.handle_key(None, ord("c"))
+    handler.handle_key(None, ord(","))
+    for ch in "conf":
+        handler.handle_key(None, ord(ch))
 
     assert config_file.parent.exists()
     expected_path = os.path.realpath(str(config_file))
     assert opened_paths["path"] == expected_path
-    assert "vim" in nav.status_message.lower()
+    assert load_calls["count"] == 1
+    assert nav.config is refreshed
+    assert config.USER_CONFIG is refreshed
+    assert "reloaded" in nav.status_message.lower()
+    assert "warn" in nav.status_message.lower()
 
 
 def test_q_shortcut_requests_quit(tmp_path):
@@ -1130,7 +1154,7 @@ def _make_nested_items(parent_path: str, child_name: str):
     ]
 
 
-def test_xd_on_file_collapses_parent(tmp_path):
+def test_xr_on_file_collapses_parent(tmp_path):
     parent_dir_path = tmp_path / "docs"
     parent_dir_path.mkdir()
     child_name = "notes.txt"
@@ -1145,14 +1169,14 @@ def test_xd_on_file_collapses_parent(tmp_path):
 
     handler.handle_key(None, ord(","))
     handler.handle_key(None, ord("x"))
-    handler.handle_key(None, ord("d"))
+    handler.handle_key(None, ord("r"))
 
     assert parent_dir not in nav.expanded_nodes
     assert "collapsed" in nav.status_message.lower()
     assert nav.need_redraw
 
 
-def test_xd_on_file_expands_parent(tmp_path):
+def test_xr_on_file_expands_parent(tmp_path):
     parent_dir_path = tmp_path / "docs"
     parent_dir_path.mkdir()
     child_name = "notes.txt"
@@ -1166,14 +1190,14 @@ def test_xd_on_file_expands_parent(tmp_path):
 
     handler.handle_key(None, ord(","))
     handler.handle_key(None, ord("x"))
-    handler.handle_key(None, ord("d"))
+    handler.handle_key(None, ord("r"))
 
     assert parent_dir in nav.expanded_nodes
     assert "expanded" in nav.status_message.lower()
     assert nav.need_redraw
 
 
-def test_xd_collapse_positions_cursor(tmp_path):
+def test_xr_collapse_positions_cursor(tmp_path):
     parent_dir_path = tmp_path / "docs"
     parent_dir_path.mkdir()
     child_name = "notes.txt"
@@ -1191,7 +1215,7 @@ def test_xd_collapse_positions_cursor(tmp_path):
 
     handler.handle_key(None, ord(","))
     handler.handle_key(None, ord("x"))
-    handler.handle_key(None, ord("d"))
+    handler.handle_key(None, ord("r"))
 
     assert nav.browser_selected == 0
     assert "collapsed" in nav.status_message.lower()

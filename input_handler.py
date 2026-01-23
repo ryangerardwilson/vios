@@ -6,7 +6,7 @@ import shutil
 import subprocess
 from typing import List
 
-from config import get_config_path
+import config
 
 
 class InputHandler:
@@ -134,6 +134,40 @@ class InputHandler:
             self.nav.status_message = "No expansions to collapse"
         self.nav.need_redraw = True
 
+    def _expand_all_directories(self):
+        self.nav.exit_visual_mode()
+
+        root = os.path.realpath(self.nav.dir_manager.current_path)
+        to_visit = [root]
+        visited = set()
+        added = 0
+
+        while to_visit:
+            current = to_visit.pop()
+            if current in visited:
+                continue
+            visited.add(current)
+
+            try:
+                entries = self.nav.dir_manager.list_directory(current)
+            except Exception:
+                continue
+
+            for name, is_dir in entries:
+                if not is_dir:
+                    continue
+                child_path = os.path.realpath(os.path.join(current, name))
+                to_visit.append(child_path)
+                if child_path not in self.nav.expanded_nodes:
+                    self.nav.expanded_nodes.add(child_path)
+                    added += 1
+
+        if added:
+            self.nav.status_message = f"Expanded {added} directories"
+        else:
+            self.nav.status_message = "No directories expanded"
+        self.nav.need_redraw = True
+
     def _handle_comma_command(
         self,
         key,
@@ -175,9 +209,11 @@ class InputHandler:
             "cp": self._leader_copy_path,
             "b": self._leader_bookmark,
             "cm": self._clear_marked_items,
-            "xd": lambda: self._toggle_inline_expansion(selection, display_items),
+            "xr": lambda: self._toggle_inline_expansion(selection, display_items),
             "dot": self._toggle_hidden_files,
             "xc": self._collapse_all_expansions,
+            "xar": self._expand_all_directories,
+            "conf": self._open_user_config,
         }
 
         file_shortcuts = getattr(self.nav.config, "file_shortcuts", {}) or {}
@@ -622,7 +658,7 @@ class InputHandler:
         return True
 
     def _open_user_config(self) -> None:
-        config_path = get_config_path()
+        config_path = config.get_config_path()
         if not config_path:
             self.nav.status_message = "Config path unavailable"
             self._flash()
@@ -649,7 +685,19 @@ class InputHandler:
 
         pretty = self.nav.dir_manager.pretty_path(target_path)
         if opened:
-            self.nav.status_message = f"Opened {pretty} in vim"
+            try:
+                refreshed = config.load_user_config()
+                config.USER_CONFIG = refreshed
+                self.nav.config = refreshed
+                message = f"Config reloaded from {pretty}"
+                if refreshed.warnings:
+                    message += f" (warn: {refreshed.warnings[0]})"
+                self.nav.status_message = message
+            except Exception:
+                self.nav.status_message = (
+                    f"Opened {pretty} in vim (reload failed)"
+                )
+                self._flash()
         else:
             self.nav.status_message = "Unable to launch vim for config"
             self._flash()
@@ -1176,11 +1224,6 @@ class InputHandler:
             self.nav.help_scroll = 0
             return False
 
-        if key == ord("c"):
-            self.nav.exit_visual_mode()
-            self._open_user_config()
-            return False
-
         if key == ord("q"):
             self.nav.exit_visual_mode()
             self.nav.status_message = "Quit"
@@ -1189,36 +1232,6 @@ class InputHandler:
 
         if key == ord("t"):
             self.nav.open_terminal()
-            return False
-
-        if key == ord("e") and total > 0 and selected_path:
-            self.nav.exit_visual_mode()
-            if selected_is_dir:
-                target_path = selected_path
-            else:
-                target_path = os.path.dirname(selected_path)
-
-            if not target_path:
-                self._flash()
-                return False
-
-            target_name = os.path.basename(target_path) or target_path
-            if target_path in self.nav.expanded_nodes:
-                collapse_index = None
-                for idx, (_, _, path, _) in enumerate(display_items):
-                    if os.path.realpath(path) == os.path.realpath(target_path):
-                        collapse_index = idx
-                        break
-
-                self.nav.collapse_branch(target_path)
-                if collapse_index is not None:
-                    self.nav.browser_selected = collapse_index
-                    self.nav.update_visual_active(self.nav.browser_selected)
-                self.nav.status_message = f"Collapsed {target_name}"
-            else:
-                self.nav.expanded_nodes.add(target_path)
-                self.nav.status_message = f"Expanded {target_name}"
-            self.nav.need_redraw = True
             return False
 
         # === Multi-mark operations ===
