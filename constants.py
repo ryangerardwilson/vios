@@ -67,7 +67,7 @@ Leader Commands (prefix ",")
   ,nf             Create new file (no open)
   ,nd             Create new directory
   ,rn             Rename selected item
-  ,fo<token>       Open configured file shortcuts (e.g. ,fonotes)
+  ,fo<token>      Open configured file shortcuts (e.g. ,fonotes)
   ,do<token>      Jump to directory shortcut (e.g. ,doga)
   ,to<token>      Open terminal at shortcut directory (e.g. ,toga)
   ,w<token>       Launch workspace shortcut (e.g. ,w1)
