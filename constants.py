@@ -17,14 +17,12 @@ Navigation
   -- List mode --
   h               Parent directory (resets filter)
   l               Enter directory (resets filter) or open file
-  j               Down
-  k               Up
+  j / k           Down / Up
   Ctrl+J          Jump down (≈10% of list)
   Ctrl+K          Jump up (≈10% of list)
   Ctrl+H          Go to previous directory in history
   Ctrl+L          Go to next directory in history
-  e               Expand/collapse selected directory inline
-  Esc             Collapse all expansions and return to ~
+  Esc             Collapse inline expansions under current directory
 
 Filtering (glob-style)
   /               Enter filter mode (type pattern)
@@ -33,18 +31,21 @@ Filtering (glob-style)
                   • "*test*" → contains "test"
                   • Press Enter to apply and persist filter
                   • Press / again to clear filter
-  Ctrl+R          Clear filter and show all items
+  Esc             Cancel filter mode / clear pattern
+  Ctrl+R          Clear filter, reset list, collapse expansions
 
 Clipboard & Multi Operations
+  m               Toggle mark on current item (✓) — auto-advance
   yy              Yank (copy) marked items (or current row) into clipboard
   dd              Cut marked items (or current row) into clipboard
-  x               Delete marked items or current entry immediately (bypass clipboard)
-  m               Toggle mark on current item (✓) — auto-advance
   p               Paste clipboard into selected directory (or alongside selected file)
+  x               Delete marked items or current entry immediately (bypass clipboard)
 
 Command Mode
   :               Enter command mode
   :!<cmd>         Run shell command in current directory
+  Esc             Cancel command mode
+  Ctrl+P / Ctrl+N Navigate command history
 
 Visual Mode
   v               Enter visual selection; press v again to add range to marks
@@ -53,24 +54,26 @@ Visual Mode
   Esc             Exit visual mode without adding range
 
 Other
+  ~               Collapse all expansions and return to ~
+  c               Open config file in Vim
   t               Open terminal in current directory
   .               Toggle show hidden files/dirs
   ?               Toggle this help
-  Ctrl+C          Quit the app
+  q               Quit the app
+  Ctrl+C          Quit immediately
 
-Leader Commands (prefix ",")
-  ,k              Jump to top
-  ,j              Jump to bottom
-  ,sa             Sort alphabetically (default)
-  ,sma            Sort by modified date ↑ (oldest first)
-  ,smd            Sort by modified date ↓ (newest first)
-  ,nf             Create new file (no open)
-  ,nd             Create new directory
+Leader Commands (press "," first)
+  ,xd             Toggle inline expansion/collapse for selection
+  ,k / ,j         Jump to top / bottom
+  ,sa / ,sma / ,smd Sort alphabetically / modified ↑ / modified ↓
+  ,nf / ,nd       Create new file / directory in context
   ,rn             Rename selected item
+  ,b              Toggle bookmark for current directory
+  ,cp             Copy cd command for current path to clipboard
+  ,cl             Clear clipboard contents
+  ,cm             Clear all marks
   ,fo<token>      Open configured file shortcuts (e.g. ,fonotes)
   ,do<token>      Jump to directory shortcut (e.g. ,doga)
   ,to<token>      Open terminal at shortcut directory (e.g. ,toga)
   ,w<token>       Launch workspace shortcut (e.g. ,w1)
-  ,cp             Copy cd command to dir path to clipboard
-  ,cl             Clear clipboard
 """

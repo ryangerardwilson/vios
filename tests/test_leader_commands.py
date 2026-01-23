@@ -425,13 +425,12 @@ def test_single_escape_collapses_current_scope():
     assert nav.status_message.startswith("Collapsed")
 
 
-def test_double_escape_returns_home_and_clears_expansions():
+def test_tilde_returns_home_and_clears_expansions():
     nav = DummyNavigator([], "/proj")
     nav.expanded_nodes.update({"/proj/src", "/other"})
     handler = InputHandler(nav)
 
-    handler.handle_key(None, 27)
-    handler.handle_key(None, 27)
+    handler.handle_key(None, ord("~"))
 
     assert nav.reset_home_called
     assert nav.expanded_nodes == set()
@@ -1127,7 +1126,7 @@ def _make_nested_items(parent_path: str, child_name: str):
     ]
 
 
-def test_e_on_file_collapses_parent(tmp_path):
+def test_xd_on_file_collapses_parent(tmp_path):
     parent_dir_path = tmp_path / "docs"
     parent_dir_path.mkdir()
     child_name = "notes.txt"
@@ -1140,14 +1139,16 @@ def test_e_on_file_collapses_parent(tmp_path):
     nav.browser_selected = 1
     handler = InputHandler(nav)
 
-    handler.handle_key(None, ord("e"))
+    handler.handle_key(None, ord(","))
+    handler.handle_key(None, ord("x"))
+    handler.handle_key(None, ord("d"))
 
     assert parent_dir not in nav.expanded_nodes
     assert "collapsed" in nav.status_message.lower()
     assert nav.need_redraw
 
 
-def test_e_on_file_expands_parent(tmp_path):
+def test_xd_on_file_expands_parent(tmp_path):
     parent_dir_path = tmp_path / "docs"
     parent_dir_path.mkdir()
     child_name = "notes.txt"
@@ -1159,14 +1160,16 @@ def test_e_on_file_expands_parent(tmp_path):
     nav.browser_selected = 1
     handler = InputHandler(nav)
 
-    handler.handle_key(None, ord("e"))
+    handler.handle_key(None, ord(","))
+    handler.handle_key(None, ord("x"))
+    handler.handle_key(None, ord("d"))
 
     assert parent_dir in nav.expanded_nodes
     assert "expanded" in nav.status_message.lower()
     assert nav.need_redraw
 
 
-def test_e_collapse_positions_cursor(tmp_path):
+def test_xd_collapse_positions_cursor(tmp_path):
     parent_dir_path = tmp_path / "docs"
     parent_dir_path.mkdir()
     child_name = "notes.txt"
@@ -1182,7 +1185,9 @@ def test_e_collapse_positions_cursor(tmp_path):
     nav.browser_selected = 1
     handler = InputHandler(nav)
 
-    handler.handle_key(None, ord("e"))
+    handler.handle_key(None, ord(","))
+    handler.handle_key(None, ord("x"))
+    handler.handle_key(None, ord("d"))
 
     assert nav.browser_selected == 0
     assert "collapsed" in nav.status_message.lower()

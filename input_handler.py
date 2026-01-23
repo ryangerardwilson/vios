@@ -22,8 +22,6 @@ class InputHandler:
         self.comma_timeout = 2.0
         self.comma_sequence = ""
 
-        self.last_escape_time = 0.0
-        self.escape_double_threshold = 0.4
         self.command_cwd: str | None = None
 
     def _check_operator_timeout(self):
@@ -71,9 +69,59 @@ class InputHandler:
         if not self.nav.add_bookmark(target):
             self._flash()
 
+    def _toggle_inline_expansion(self, selection, display_items):
+        if not selection:
+            self._flash()
+            return
+
+        _, is_dir, selected_path, _ = selection
+
+        if not selected_path:
+            self._flash()
+            return
+
+        if is_dir:
+            target_path = selected_path
+        else:
+            target_path = os.path.dirname(selected_path)
+
+        if not target_path:
+            self._flash()
+            return
+
+        target_real = os.path.realpath(target_path)
+        target_name = os.path.basename(target_path) or target_path
+
+        if target_path in self.nav.expanded_nodes:
+            collapse_index = None
+            for idx, (_, _, path, _) in enumerate(display_items):
+                if os.path.realpath(path) == target_real:
+                    collapse_index = idx
+                    break
+
+            self.nav.collapse_branch(target_path)
+            if collapse_index is not None:
+                self.nav.browser_selected = collapse_index
+                self.nav.update_visual_active(self.nav.browser_selected)
+            self.nav.status_message = f"Collapsed {target_name}"
+        else:
+            self.nav.expanded_nodes.add(target_path)
+            self.nav.status_message = f"Expanded {target_name}"
+
+        self.nav.need_redraw = True
+
     def _handle_comma_command(
-        self, key, total: int, selection, context_path, scope_range, target_dir
+        self,
+        key,
+        total: int,
+        selection,
+        context_path,
+        scope_range,
+        target_dir,
+        display_items=None,
     ) -> bool:
+        if display_items is None:
+            display_items = self.nav.build_display_items()
         ch = self._key_to_char(key)
         if ch is None:
             self._reset_comma()
@@ -103,6 +151,7 @@ class InputHandler:
             "cp": self._leader_copy_path,
             "b": self._leader_bookmark,
             "cm": self._clear_marked_items,
+            "xd": lambda: self._toggle_inline_expansion(selection, display_items),
         }
 
         file_shortcuts = getattr(self.nav.config, "file_shortcuts", {}) or {}
@@ -971,27 +1020,30 @@ class InputHandler:
         if key == 27:  # Esc outside filter mode
             if getattr(self.nav, "visual_mode", False):
                 self.nav.exit_visual_mode()
-                self.last_escape_time = 0.0
                 return False
-            now = time.time()
-            is_double = (now - self.last_escape_time) <= self.escape_double_threshold
-            self.last_escape_time = 0.0 if is_double else now
 
             self._reset_comma()
             self.pending_operator = None
             self.in_filter_mode = False
             self.nav.dir_manager.filter_pattern = ""
 
-            if is_double:
-                self.nav.reset_to_home()
-                self.nav.status_message = "Returned to ~"
-            else:
-                current_path = self.nav.dir_manager.current_path
-                self.nav.collapse_expansions_under(current_path)
-                self.nav.status_message = (
-                    f"Collapsed {os.path.basename(current_path) or current_path}"
-                )
+            current_path = self.nav.dir_manager.current_path
+            self.nav.collapse_expansions_under(current_path)
+            self.nav.status_message = (
+                f"Collapsed {os.path.basename(current_path) or current_path}"
+            )
 
+            return False
+
+        if key == ord("~"):
+            self.nav.exit_visual_mode()
+            self._reset_comma()
+            self.pending_operator = None
+            self.in_filter_mode = False
+            self.nav.dir_manager.filter_pattern = ""
+            self.nav.reset_to_home()
+            self.nav.status_message = "Returned to ~"
+            self.nav.need_redraw = True
             return False
 
         display_items = self.nav.build_display_items()
@@ -1027,7 +1079,13 @@ class InputHandler:
 
         if self.pending_comma:
             if self._handle_comma_command(
-                key, total, selection, context_path, scope_range, target_dir
+                key,
+                total,
+                selection,
+                context_path,
+                scope_range,
+                target_dir,
+                display_items,
             ):
                 return False
 

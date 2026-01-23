@@ -76,11 +76,13 @@ python main.py
     - `Ctrl+J` / `Ctrl+K` jump roughly 10% down/up the list.
   - `Enter` toggles between Matrix and list views at any time.
 - **Leader Commands (press `,` first)**
+  - `,xd` — Toggle inline expansion/collapse for the selected item
   - `,j` / `,k` — Jump to bottom/top instantly
   - `,sa` / `,sma` / `,smd` — Sorting shortcuts
   - `,nf` — Create new file (no open)
   - `,nd` — Create new directory
   - `,rn` — Rename selected item
+  - `,b` — Toggle bookmark for the current directory
   - `,fo<token>` — Open configured file shortcut (e.g. `,fonotes`)
   - `,do<token>` — Jump to directory shortcut (e.g. `,doga`)
   - `,to<token>` — Open external terminal at shortcut directory (e.g. `,toga`)
@@ -146,16 +148,18 @@ modal file browser without leaving the terminal.
 - `h`: Parent dir.
 - `l`: Enter dir or open file.
 - `Ctrl+J` / `Ctrl+K`: Jump down/up quickly.
-- `e`: Expand/collapse selected directory inline.
+- `,xd`: Toggle inline expansion/collapse for the selection.
 - `Ctrl+H` / `Ctrl+L`: Jump backward/forward through directory history.
-- `Esc`: Collapse all expansions and return to `~`.
+- `Esc`: Collapse inline expansions under the current directory.
+- `~`: Collapse all expansions and return to `~`.
 
 ### File Operations
 
-- yy: Copy.
-- dd: Cut.
-- Backspace: Delete.
-- p: Paste into the selected directory (or alongside the selected file).
+- `yy`: Copy the current row or marked items to the clipboard.
+- `dd`: Cut the current row or marked items to the clipboard.
+- `p`: Paste the clipboard into the selected directory (or alongside the selected file).
+- `x`: Delete marked items or the current selection immediately (no clipboard).
+- `m`: Toggle mark on the current item (auto-advances the cursor).
 
 ### Visual Mode
 
@@ -171,21 +175,31 @@ modal file browser without leaving the terminal.
 - `Enter` runs the command; `Esc` cancels.
 - Command output appears in a popup; use `j` / `k` to scroll and `Esc` to close.
 
-### Open Terminal
+### Open Terminal & Config
 
-- t: Launches Alacritty in current dir.
-- Quit: Esc.
+- `t`: Launches Alacritty in the current directory.
+- `c`: Opens your `o` config file in Vim (creating directories as needed).
+
+### Quit
+
+- `q`: Quit the application.
+- `Ctrl+C`: Force quit.
 
 ### Leader Commands (press `,` first)
 
+- ,xd: Toggle inline expansion/collapse for the current selection.
 - ,j / ,k: Jump to bottom/top instantly.
 - ,sa / ,sma / ,smd: Sort alphabetically, by modified date ascending, or descending.
-- ,nf: Create new file (no open).
-- ,nd: Create new directory.
+- ,nf / ,nd: Create a new file / directory without opening it.
 - ,rn: Rename the currently selected item.
+- ,b: Toggle a bookmark for the current directory.
 - ,cp: Copy a `cd` command for the current directory to the system clipboard.
 - ,cl: Clear the multi-item clipboard buffer.
 - ,cm: Clear all marks.
+- ,fo<token>: Open configured file shortcuts (e.g. `,fonotes`).
+- ,do<token>: Jump to a directory shortcut (e.g. `,doga`).
+- ,to<token>: Open a terminal at a directory shortcut (e.g. `,toga`).
+- ,w<token>: Launch workspace shortcuts (e.g. `,w1`).
 - ,i<token>: Open configured browser shortcut (e.g. `,ix`).
 
 ---
