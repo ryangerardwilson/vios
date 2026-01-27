@@ -87,13 +87,8 @@ python main.py
   - `,nd` — Create new directory
   - `,rn` — Rename selected item
   - `,b` — Toggle bookmark for the current directory
-  - `,fo<token>` — Open configured file shortcut (e.g. `,fonotes`)
-  - `,do<token>` — Jump to directory shortcut (e.g. `,doga`)
-  - `,to<token>` — Open external terminal at shortcut directory (e.g. `,toga`)
-  - `,w<token>` — Launch workspace shortcut (open internal + external targets)
   - `,cl` — Clear clipboard contents
   - `,cm` — Clear all marks
-  - `,i<token>` — Open configured browser shortcut (e.g. `,ix`)
 - **Repeat commands**
   - `.` — Repeat the last repeatable command (`m`, `p`, `,xr`, `,xar`, `,dot`, `,conf`, `,nf`, `,nd`, `,rn`, `,b`)
 - **Powerful Filtering** (glob-style):
@@ -210,11 +205,6 @@ modal file browser without leaving the terminal.
 - ,b: Toggle a bookmark for the current directory.
 - ,cl: Clear the multi-item clipboard buffer.
 - ,cm: Clear all marks.
-- ,fo<token>: Open configured file shortcuts (e.g. `,fonotes`).
-- ,do<token>: Jump to a directory shortcut (e.g. `,doga`).
-- ,to<token>: Open a terminal at a directory shortcut (e.g. `,toga`).
-- ,w<token>: Launch workspace shortcuts (e.g. `,w1`).
-- ,i<token>: Open configured browser shortcut (e.g. `,ix`).
 
 ---
 
@@ -265,23 +255,8 @@ Supported options:
     `is_internal` to `true` if you prefer terminal-native tools that should take
     over the current UI.
   - `editor` (optional) overrides the fallback editor used for other files.
-- `file_shortcuts` — map custom tokens (lowercase alphanumeric) to specific files (absolute paths or with `~`).
-  Trigger them with `,fo<token>` to open PDFs, images, or any file using your configured handlers (e.g. `,fo1`, `,fokr`).
-- `dir_shortcuts` — map custom tokens (alphanumeric) to directories. Trigger with:
-  - `,do<token>` to jump inside the directory (e.g. `,doga` → `~/Apps/genie_allocation`)
-  - `,to<token>` to launch an external terminal at the directory without changing focus.
-- `workspace_shortcuts` — map tokens to an object with optional `internal` and
-  `external` entries. Each entry accepts either a path (string) or a list of
-  command arrays (e.g. `[ ["worship"] ]`). Paths behave as before; command arrays on the
-  `external` side spawn a new terminal and run there, while `internal` command arrays run
-  synchronously inside `o`. Trigger with `,w<token>` to open both targets (internal opens
-  inside `o`, external launches via handlers/terminal).
-- `browser_setup` — configure URL launchers for `,i<token>` shortcuts.
-  - `command`: list of command arrays to try when opening URLs. Use `{url}` as a placeholder (if omitted, the URL is appended).
-  - `shortcuts`: map tokens to URLs (e.g. `{ "x": "https://x.com" }`). Trigger with `,i<token>`.
-
-If a handler command or mapping is missing, `o` simply leaves the file
-unopened. Configure viewers/editors explicitly to control how files launch.
+If a handler command or mapping is missing, `o` simply leaves the file unopened.
+Configure viewers/editors explicitly to control how files launch.
 
 Reference template:
 
@@ -293,32 +268,6 @@ Reference template:
     "image_viewer": { "commands": [["feh"]] },
     "csv_viewer": { "commands": [["libreoffice", "--calc"]] },
     "parquet_viewer": { "commands": [["db-browser-for-sqlite"]] }
-  },
-  "file_shortcuts": {
-    "guide": "~/Documents/guides/getting-started.pdf",
-    "notes": "~/Documents/notes/meeting-notes.md",
-    "ref": "~/Documents/reference/api-cheatsheet.pdf"
-  },
-  "dir_shortcuts": {
-    "proj": "~/Projects/alpha",
-    "docs": "~/Documents",
-    "media": "~/Media"
-  },
-  "workspace_shortcuts": {
-    "docs": {
-      "internal": "~/Documents",
-      "external": [["alacritty", "--working-directory", "~/Documents"]]
-    },
-    "analysis": {
-      "internal": [["code", "~/Projects/alpha"]],
-      "external": [["libreoffice", "~/Documents/data/report.csv"]]
-    }
-  },
-  "browser_setup": {
-    "command": [["xdg-open"]],
-    "shortcuts": {
-      "home": "https://example.com"
-    }
   }
 }
 ```
@@ -336,33 +285,6 @@ adapt it to your own tools and directory structure:
     "image_viewer": { "commands": [["feh"]] },
     "csv_viewer": { "commands": [["libreoffice", "--calc"]] },
     "parquet_viewer": { "commands": [["db-browser-for-sqlite"]] }
-  },
-  "file_shortcuts": {
-    "guide": "~/Documents/guides/getting-started.pdf",
-    "notes": "~/Documents/notes/team-notes.md",
-    "ref": "~/Documents/reference/on-call-playbook.pdf"
-  },
-  "dir_shortcuts": {
-    "proj": "~/Projects/alpha",
-    "docs": "~/Documents",
-    "media": "~/Media"
-  },
-  "workspace_shortcuts": {
-    "docs": {
-      "internal": "~/Documents",
-      "external": [["alacritty", "--working-directory", "~/Documents"]]
-    },
-    "analysis": {
-      "internal": [["code", "~/Projects/alpha"]],
-      "external": [["libreoffice", "~/Documents/data/report.csv"]]
-    }
-  },
-  "browser_setup": {
-    "command": [["google-chrome-stable"]],
-    "shortcuts": {
-      "x": "https://x.com",
-      "docs": "https://docs.example.com"
-    }
   }
 }
 ```
@@ -380,20 +302,5 @@ adapt it to your own tools and directory structure:
     use).
   - Set `is_internal` to `true` for terminal-native tools that should replace the
     current `o` UI until they exit (e.g. `vixl`, `less`, `bat`).
-- `file_shortcuts` attach friendly names to frequently referenced files and can
-  be launched with `,fo<token>` (e.g. `,fonotes`).
-- `dir_shortcuts` map quick tokens to directories for navigation (` ,do proj`
-  jumps into `~/Projects/alpha`, `,to docs` opens a terminal there).
-- `workspace_shortcuts` bundle related actions:
-  - `docs` jumps inside `~/Documents` and opens a new terminal in the same
-    location.
-  - `analysis` runs a code editor pointed at your project and opens LibreOffice
-    with a dataset in a separate terminal. Each entry accepts either a direct
-    path or an array describing a command (CSV/Parquet commands launch in a
-    terminal automatically).
-- `browser_setup` defines how URLs launch:
-  - `command` lists browser commands to try (each entry is a shell command array; `{url}` is replaced automatically or appended if absent).
-  - `shortcuts` map tokens to URLs, making `,i<token>` open the URL in your preferred browser.
-
 Feel free to swap out the sample applications (Evince, Feh, LibreOffice, etc.)
 with whatever viewers and editors you have installed.

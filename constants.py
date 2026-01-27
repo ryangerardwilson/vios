@@ -74,8 +74,4 @@ Leader Commands (press "," first)
   ,b              Toggle bookmark for current directory
   ,cl             Clear clipboard contents
   ,cm             Clear all marks
-  ,fo<token>      Open configured file shortcuts (e.g. ,fonotes)
-  ,do<token>      Jump to directory shortcut (e.g. ,doga)
-  ,to<token>      Open terminal at shortcut directory (e.g. ,toga)
-  ,w<token>       Launch workspace shortcut (e.g. ,w1)
 """

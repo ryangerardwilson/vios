@@ -5,7 +5,6 @@ import shlex
 import shutil
 import subprocess
 import zipfile
-import webbrowser
 from typing import Optional, cast, Any, List
 
 from config import HandlerSpec
@@ -647,62 +646,3 @@ class FileActionService:
         self.nav.status_message = "No terminal found"
         curses.flash()
         return False
-
-    def open_url(self, url: str) -> bool:
-        if not url:
-            return False
-
-        commands = list(getattr(self.nav.config, "browser_commands", []) or [])
-        fallbacks: List[List[str]] = [
-            ["xdg-open"],
-            ["gio", "open"],
-            ["sensible-browser"],
-            ["open"],  # macOS
-        ]
-
-        seen: set[tuple[str, ...]] = set()
-        for raw_cmd in commands + fallbacks:
-            if not raw_cmd:
-                continue
-            normalized_key = tuple(part for part in raw_cmd if isinstance(part, str))
-            if not normalized_key:
-                continue
-            if normalized_key in seen:
-                continue
-            seen.add(normalized_key)
-
-            tokens = []
-            has_placeholder = False
-            for part in raw_cmd:
-                if not isinstance(part, str):
-                    continue
-                replaced = part.replace("{url}", url)
-                if replaced != part:
-                    has_placeholder = True
-                tokens.append(replaced)
-
-            if not tokens:
-                continue
-
-            if not has_placeholder:
-                tokens.append(url)
-
-            if shutil.which(tokens[0]) is None:
-                continue
-
-            try:
-                subprocess.Popen(
-                    tokens,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    stdin=subprocess.DEVNULL,
-                    preexec_fn=os.setsid,
-                )
-                return True
-            except Exception:
-                continue
-
-        try:
-            return webbrowser.open(url, new=0, autoraise=False)
-        except Exception:
-            return False

@@ -9,11 +9,6 @@ from typing import Any, Dict, List, Tuple
 class UserConfig:
     matrix_mode: bool = False
     handlers: Dict[str, "HandlerSpec"] = field(default_factory=dict)
-    file_shortcuts: Dict[str, str] = field(default_factory=dict)
-    dir_shortcuts: Dict[str, str] = field(default_factory=dict)
-    workspace_shortcuts: Dict[str, Dict[str, Any]] = field(default_factory=dict)
-    browser_commands: List[List[str]] = field(default_factory=list)
-    browser_shortcuts: Dict[str, str] = field(default_factory=dict)
     warnings: List[str] = field(default_factory=list)
 
     def get_handler_commands(self, name: str) -> List[List[str]]:
@@ -103,264 +98,6 @@ def _normalize_handler_commands(raw_value) -> List[List[str]]:
     return commands
 
 
-def _normalize_path(value: str) -> str:
-    if not isinstance(value, str):
-        return ""
-    expanded = os.path.expanduser(value.strip())
-    if not expanded:
-        return ""
-    return os.path.realpath(expanded)
-
-
-def _normalize_file_shortcuts(raw_shortcuts) -> Tuple[Dict[str, str], List[str]]:
-    shortcuts: Dict[str, str] = {}
-    warnings: List[str] = []
-
-    if not isinstance(raw_shortcuts, dict):
-        return shortcuts, warnings
-
-    for raw_key, raw_value in raw_shortcuts.items():
-        if not isinstance(raw_key, str):
-            warnings.append("file_shortcuts key ignored (not a string)")
-            continue
-
-        token = raw_key.strip().lower()
-        if not token:
-            warnings.append("file_shortcuts entry ignored (empty key)")
-            continue
-
-        if not token.isalnum():
-            warnings.append(
-                f"file_shortcuts key '{raw_key}' ignored (use alphanumeric tokens)"
-            )
-            continue
-
-        path = _normalize_path(raw_value)
-        if not path:
-            warnings.append(f"file_shortcuts '{raw_key}' ignored (empty path)")
-            continue
-
-        if not os.path.isfile(path):
-            warnings.append(
-                f"file_shortcuts '{raw_key}' ignored ({path} is not an existing file)"
-            )
-            continue
-
-        shortcuts[token] = path
-
-    return shortcuts, warnings
-
-
-def _normalize_dir_shortcuts(raw_shortcuts) -> Tuple[Dict[str, str], List[str]]:
-    shortcuts: Dict[str, str] = {}
-    warnings: List[str] = []
-
-    if not isinstance(raw_shortcuts, dict):
-        return shortcuts, warnings
-
-    for raw_key, raw_value in raw_shortcuts.items():
-        if not isinstance(raw_key, str):
-            warnings.append("dir_shortcuts key ignored (not a string)")
-            continue
-
-        token = raw_key.strip().lower()
-        if not token:
-            warnings.append("dir_shortcuts entry ignored (empty key)")
-            continue
-
-        if not token.isalnum():
-            warnings.append(
-                f"dir_shortcuts key '{raw_key}' ignored (use alphanumeric tokens)"
-            )
-            continue
-
-        path = _normalize_path(raw_value)
-        if not path:
-            warnings.append(f"dir_shortcuts '{raw_key}' ignored (empty path)")
-            continue
-
-        if not os.path.isdir(path):
-            warnings.append(
-                f"dir_shortcuts '{raw_key}' ignored ({path} is not an existing directory)"
-            )
-            continue
-
-        shortcuts[token] = path
-
-    return shortcuts, warnings
-
-
-def _normalize_workspace_shortcuts(
-    raw_shortcuts,
-) -> Tuple[Dict[str, Dict[str, Any]], List[str]]:
-    shortcuts: Dict[str, Dict[str, Any]] = {}
-    warnings: List[str] = []
-
-    if not isinstance(raw_shortcuts, dict):
-        return shortcuts, warnings
-
-    for raw_key, raw_value in raw_shortcuts.items():
-        if not isinstance(raw_key, str):
-            warnings.append("workspace_shortcuts key ignored (not a string)")
-            continue
-
-        token = raw_key.strip().lower()
-        if not token:
-            warnings.append("workspace_shortcuts entry ignored (empty key)")
-            continue
-
-        if not token.isalnum():
-            warnings.append(
-                f"workspace_shortcuts key '{raw_key}' ignored (use alphanumeric tokens)"
-            )
-            continue
-
-        if not isinstance(raw_value, dict):
-            warnings.append(
-                f"workspace_shortcuts '{raw_key}' ignored (expected object with paths or commands)"
-            )
-            continue
-
-        normalized_entry: Dict[str, Any] = {}
-
-        for label in ("internal", "external"):
-            candidate = raw_value.get(label)
-            if candidate is None:
-                continue
-
-            key_path = f"{label}_path"
-            key_commands = f"{label}_commands"
-
-            if isinstance(candidate, str):
-                path = _normalize_path(candidate)
-                if not path:
-                    warnings.append(
-                        f"workspace_shortcuts '{raw_key}' {label} ignored (empty path)"
-                    )
-                    continue
-                if not os.path.exists(path):
-                    warnings.append(
-                        f"workspace_shortcuts '{raw_key}' {label} ignored ({path} missing)"
-                    )
-                    continue
-                normalized_entry[key_path] = path
-                continue
-
-            if isinstance(candidate, list):
-                commands: List[List[str]] = []
-                saw_invalid = False
-                for entry in candidate:
-                    cmd = _normalize_command(entry)
-                    if cmd:
-                        commands.append(cmd)
-                        continue
-
-                    if isinstance(entry, list):
-                        # Treat lists containing only empty/whitespace strings as "no preference"
-                        if not entry or all(
-                            isinstance(token, str) and not token.strip()
-                            for token in entry
-                        ):
-                            continue
-                        if not all(isinstance(token, str) for token in entry):
-                            saw_invalid = True
-                        else:
-                            saw_invalid = True
-                        continue
-
-                    if isinstance(entry, str):
-                        # Blank strings are also considered "no preference"
-                        if not entry.strip():
-                            continue
-                        saw_invalid = True
-                        continue
-
-                    if entry is None:
-                        continue
-
-                    saw_invalid = True
-
-                if commands:
-                    normalized_entry[key_commands] = commands
-                    continue
-
-                if saw_invalid:
-                    warnings.append(
-                        f"workspace_shortcuts '{raw_key}' {label} ignored (no valid commands)"
-                    )
-                continue
-
-            warnings.append(
-                f"workspace_shortcuts '{raw_key}' {label} ignored (unsupported type)"
-            )
-
-        if normalized_entry:
-            shortcuts[token] = normalized_entry
-        else:
-            warnings.append(
-                f"workspace_shortcuts '{raw_key}' ignored (no valid paths or commands)"
-            )
-
-    return shortcuts, warnings
-
-
-def _normalize_browser_setup(
-    raw_browser,
-) -> Tuple[List[List[str]], Dict[str, str], List[str]]:
-    commands: List[List[str]] = []
-    shortcuts: Dict[str, str] = {}
-    warnings: List[str] = []
-
-    if not isinstance(raw_browser, dict):
-        return commands, shortcuts, warnings
-
-    raw_commands = raw_browser.get("command")
-    if isinstance(raw_commands, list):
-        for entry in raw_commands:
-            cmd = _normalize_command(entry)
-            if cmd:
-                commands.append(cmd)
-    else:
-        cmd = _normalize_command(raw_commands)
-        if cmd:
-            commands.append(cmd)
-
-    raw_shortcuts = raw_browser.get("shortcuts", {})
-    if isinstance(raw_shortcuts, dict):
-        for raw_key, raw_value in raw_shortcuts.items():
-            if not isinstance(raw_key, str):
-                warnings.append("browser shortcut key ignored (not a string)")
-                continue
-
-            token = raw_key.strip().lower()
-            if not token:
-                warnings.append("browser shortcut entry ignored (empty key)")
-                continue
-
-            if not token.isalnum():
-                warnings.append(
-                    f"browser shortcut key '{raw_key}' ignored (use alphanumeric tokens)"
-                )
-                continue
-
-            if not isinstance(raw_value, str):
-                warnings.append(
-                    f"browser shortcut '{raw_key}' ignored (URL must be a string)"
-                )
-                continue
-
-            url = raw_value.strip()
-            if not url:
-                warnings.append(f"browser shortcut '{raw_key}' ignored (empty URL)")
-                continue
-
-            shortcuts[token] = url
-    else:
-        warnings.append("browser shortcuts ignored (expected object)")
-
-    return commands, shortcuts, warnings
-
-
 def load_user_config() -> UserConfig:
     path = _config_path()
     data = {}
@@ -377,33 +114,28 @@ def load_user_config() -> UserConfig:
     if not isinstance(matrix_mode, bool):
         matrix_mode = False
 
+    warnings: List[str] = []
+
     handlers = _normalize_handlers(data.get("handlers", {}))
 
-    file_shortcuts, file_warnings = _normalize_file_shortcuts(
-        data.get("file_shortcuts", {})
+    deprecated_keys = (
+        "file_shortcuts",
+        "dir_shortcuts",
+        "workspace_shortcuts",
     )
-    dir_shortcuts, dir_warnings = _normalize_dir_shortcuts(
-        data.get("dir_shortcuts", {})
-    )
+    for key in deprecated_keys:
+        if key in data:
+            warnings.append(f"{key} is no longer supported and was ignored")
 
-    workspace_shortcuts, workspace_warnings = _normalize_workspace_shortcuts(
-        data.get("workspace_shortcuts", {})
-    )
+    if "browser_setup" in data:
+        warnings.append("browser_setup is no longer supported and was ignored")
 
-    browser_commands, browser_shortcuts, browser_warnings = _normalize_browser_setup(
-        data.get("browser_setup")
-    )
-
-    warnings = file_warnings + dir_warnings + workspace_warnings + browser_warnings
+    if "browser_shortcuts" in data:
+        warnings.append("browser_shortcuts is no longer supported and was ignored")
 
     return UserConfig(
         matrix_mode=matrix_mode,
         handlers=handlers,
-        file_shortcuts=file_shortcuts,
-        dir_shortcuts=dir_shortcuts,
-        workspace_shortcuts=workspace_shortcuts,
-        browser_commands=browser_commands,
-        browser_shortcuts=browser_shortcuts,
         warnings=warnings,
     )
 
