@@ -8,6 +8,8 @@ import zipfile
 import webbrowser
 from typing import Optional, cast, Any, List
 
+from config import HandlerSpec
+
 
 class FileActionService:
     def __init__(self, navigator):
@@ -132,24 +134,28 @@ class FileActionService:
         is_text_like = False
         try:
             if ext == ".csv":
-                handled = self._run_terminal_handlers(
-                    self.nav.config.get_handler_commands("csv_viewer"), filepath
+                handled = self._invoke_handler(
+                    self.nav.config.get_handler_spec("csv_viewer"),
+                    filepath,
+                    default_strategy="terminal",
                 )
             elif ext == ".parquet":
-                handled = self._run_terminal_handlers(
-                    self.nav.config.get_handler_commands("parquet_viewer"), filepath
+                handled = self._invoke_handler(
+                    self.nav.config.get_handler_spec("parquet_viewer"),
+                    filepath,
+                    default_strategy="terminal",
                 )
             elif mime_type == "application/pdf":
-                handled = self._run_external_handlers(
-                    self.nav.config.get_handler_commands("pdf_viewer"),
+                handled = self._invoke_handler(
+                    self.nav.config.get_handler_spec("pdf_viewer"),
                     filepath,
-                    background=True,
+                    default_strategy="external_background",
                 )
             elif mime_type and mime_type.startswith("image/"):
-                handled = self._run_external_handlers(
-                    self.nav.config.get_handler_commands("image_viewer"),
+                handled = self._invoke_handler(
+                    self.nav.config.get_handler_spec("image_viewer"),
                     filepath,
-                    background=True,
+                    default_strategy="external_background",
                 )
             else:
                 is_text_like = bool(
@@ -172,10 +178,10 @@ class FileActionService:
                         ".hpp",
                     }
                 )
-                handled = self._run_external_handlers(
-                    self.nav.config.get_handler_commands("editor"),
+                handled = self._invoke_handler(
+                    self.nav.config.get_handler_spec("editor"),
                     filepath,
-                    background=False,
+                    default_strategy="external_foreground",
                 )
         except FileNotFoundError:
             pass
@@ -226,6 +232,36 @@ class FileActionService:
 
         return False
 
+    def _invoke_handler(
+        self,
+        spec: HandlerSpec,
+        filepath: str,
+        *,
+        default_strategy: str,
+    ) -> bool:
+        if not spec.commands:
+            return False
+
+        if spec.is_internal:
+            return self._run_internal_handler(spec.commands, filepath)
+
+        if default_strategy == "terminal":
+            return self._run_terminal_handlers(spec.commands, filepath)
+        if default_strategy == "external_foreground":
+            return self._run_external_handlers(
+                spec.commands,
+                filepath,
+                background=False,
+            )
+        if default_strategy == "external_background":
+            return self._run_external_handlers(
+                spec.commands,
+                filepath,
+                background=True,
+            )
+
+        return False
+
     def _run_external_handlers(
         self,
         handlers: List[List[str]],
@@ -237,17 +273,9 @@ class FileActionService:
             return False
 
         for raw_cmd in handlers:
-            if not raw_cmd:
-                continue
-            tokens = []
-            for part in raw_cmd:
-                if not isinstance(part, str):
-                    continue
-                tokens.append(part.replace("{file}", filepath))
+            tokens = self._expand_command(raw_cmd, filepath)
             if not tokens:
                 continue
-            if "{file}" not in "".join(raw_cmd):
-                tokens = tokens + [filepath]
 
             cmd_name = tokens[0]
             if shutil.which(cmd_name) is None:
@@ -277,22 +305,109 @@ class FileActionService:
             return False
 
         for raw_cmd in handlers:
-            if not raw_cmd:
-                continue
-            tokens: List[str] = []
-            for part in raw_cmd:
-                if not isinstance(part, str):
-                    continue
-                tokens.append(part.replace("{file}", filepath))
+            tokens = self._expand_command(raw_cmd, filepath)
             if not tokens:
                 continue
-            if "{file}" not in "".join(raw_cmd):
-                tokens.append(filepath)
 
             if self.nav.open_terminal(None, tokens):
                 return True
 
         return False
+
+    def _run_internal_handler(
+        self, handlers: List[List[str]], filepath: str
+    ) -> bool:
+        stdscr_opt = getattr(self.nav.renderer, "stdscr", None)
+
+        if stdscr_opt is not None:
+            try:
+                curses.def_prog_mode()
+            except curses.error:
+                pass
+            try:
+                curses.endwin()
+            except curses.error:
+                pass
+
+        succeeded = False
+        attempted = False
+        last_cmd = None
+
+        try:
+            for raw_cmd in handlers:
+                tokens = self._expand_command(raw_cmd, filepath)
+                if not tokens:
+                    continue
+
+                if shutil.which(tokens[0]) is None:
+                    continue
+
+                attempted = True
+                last_cmd = tokens[0]
+
+                try:
+                    return_code = subprocess.call(tokens)
+                except FileNotFoundError:
+                    continue
+                except Exception:
+                    continue
+
+                if return_code == 0:
+                    succeeded = True
+                    break
+        finally:
+            if stdscr_opt is not None:
+                try:
+                    curses.reset_prog_mode()
+                except curses.error:
+                    pass
+                try:
+                    curses.curs_set(0)
+                except curses.error:
+                    pass
+                try:
+                    stdscr = cast(Any, stdscr_opt)
+                    stdscr.refresh()
+                except Exception:
+                    pass
+
+        if succeeded:
+            cmd_display = last_cmd or "handler"
+            self.nav.status_message = f"Handler exited: {cmd_display}"
+            self.nav.need_redraw = True
+            return True
+
+        if attempted:
+            cmd_display = last_cmd or "handler"
+            self.nav.status_message = f"Handler failed: {cmd_display}"
+            self.nav.need_redraw = True
+            curses.flash()
+            return True
+
+        return False
+
+    def _expand_command(self, raw_cmd: List[str], filepath: str) -> List[str] | None:
+        if not raw_cmd:
+            return None
+
+        tokens: List[str] = []
+        has_placeholder = False
+
+        for part in raw_cmd:
+            if not isinstance(part, str):
+                continue
+            replaced = part.replace("{file}", filepath)
+            if replaced != part:
+                has_placeholder = True
+            tokens.append(replaced)
+
+        if not tokens:
+            return None
+
+        if not has_placeholder:
+            tokens.append(filepath)
+
+        return tokens
 
     def create_new_file(self):
         filename = self._prompt_for_input("New file: ")

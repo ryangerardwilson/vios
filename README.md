@@ -242,25 +242,28 @@ Supported options:
 
 - `matrix_mode` — `true` / `false`. Controls whether Matrix view is the default
   when the app launches.
-- `handlers` — map of external programs to launch for certain file types. Each
-  entry is an array of command arrays. Examples:
+- `handlers` — map of programs to launch for specific file types. Each entry can
+  be either the legacy list-of-commands or the richer object form shown below.
   ```json
   {
     "handlers": {
-      "pdf_viewer": [["zathura"]],
-      "image_viewer": [["swayimg"]],
-      "csv_viewer": [["vixl"]],
-      "parquet_viewer": [["vixl"]],
-      "editor": [["vim"]]
+      "pdf_viewer": { "commands": [["zathura"]] },
+      "image_viewer": { "commands": [["swayimg"]] },
+      "csv_viewer": { "commands": [["vixl"]], "is_internal": true },
+      "parquet_viewer": { "commands": [["vixl"]], "is_internal": true },
+      "editor": { "commands": [["vim"]] }
     }
   }
   ```
-  - Each sub-array represents a command to try (with optional arguments). If a
-    command does **not** include `{file}`, the file path is appended.
+  - Each sub-array under `commands` represents a command to try (with optional
+    arguments). If a command does **not** include `{file}`, the file path is appended.
+  - `is_internal: true` runs the handler inside `o` (the TUI suspends until the
+    command exits). Leave it as `false` or omit it to launch the command in a
+    new terminal or background process, preserving the existing UI behaviour.
   - `pdf_viewer` and `image_viewer` control the viewers for PDFs and images.
-  - `csv_viewer` and `parquet_viewer` run inside a fresh external terminal. Be
-    sure to configure terminal-friendly commands (CLI tools or wrappers like
-    `alacritty -e my-viewer`).
+  - `csv_viewer` and `parquet_viewer` default to external terminals; flip
+    `is_internal` to `true` if you prefer terminal-native tools that should take
+    over the current UI.
   - `editor` (optional) overrides the fallback editor used for other files.
 - `file_shortcuts` — map custom tokens (lowercase alphanumeric) to specific files (absolute paths or with `~`).
   Trigger them with `,fo<token>` to open PDFs, images, or any file using your configured handlers (e.g. `,fo1`, `,fokr`).
@@ -286,10 +289,10 @@ Reference template:
 {
   "matrix_mode": false,
   "handlers": {
-    "pdf_viewer": [["evince"]],
-    "image_viewer": [["feh"]],
-    "csv_viewer": [["libreoffice", "--calc"]],
-    "parquet_viewer": [["db-browser-for-sqlite"]]
+    "pdf_viewer": { "commands": [["evince"]] },
+    "image_viewer": { "commands": [["feh"]] },
+    "csv_viewer": { "commands": [["libreoffice", "--calc"]] },
+    "parquet_viewer": { "commands": [["db-browser-for-sqlite"]] }
   },
   "file_shortcuts": {
     "guide": "~/Documents/guides/getting-started.pdf",
@@ -329,10 +332,10 @@ adapt it to your own tools and directory structure:
 {
   "matrix_mode": true,
   "handlers": {
-    "pdf_viewer": [["evince"]],
-    "image_viewer": [["feh"]],
-    "csv_viewer": [["libreoffice", "--calc"]],
-    "parquet_viewer": [["db-browser-for-sqlite"]]
+    "pdf_viewer": { "commands": [["evince"]] },
+    "image_viewer": { "commands": [["feh"]] },
+    "csv_viewer": { "commands": [["libreoffice", "--calc"]] },
+    "parquet_viewer": { "commands": [["db-browser-for-sqlite"]] }
   },
   "file_shortcuts": {
     "guide": "~/Documents/guides/getting-started.pdf",
@@ -366,14 +369,17 @@ adapt it to your own tools and directory structure:
 
 - `matrix_mode: true` launches `o` in the animated Matrix layout. Set it to
   `false` if you prefer the classic list by default.
-- `handlers` define which external programs open specific file types. Each
-  inner array is a command you could run in a shell. If the command doesn’t
-  contain `{file}`, the file path is appended automatically.
+- `handlers` define which programs open specific file types. In the example we
+  use the object form, where each entry exposes a `commands` array (list of
+  command arrays) and optional `is_internal` flag. `{file}` placeholders are
+  replaced automatically; if a command omits `{file}`, the file path is appended.
   - `pdf_viewer`: opens PDFs with Evince.
   - `image_viewer`: opens images in Feh.
   - `csv_viewer`: sends CSV files to LibreOffice Calc.
   - `parquet_viewer`: launches a Parquet-friendly tool (replace with whatever you
     use).
+  - Set `is_internal` to `true` for terminal-native tools that should replace the
+    current `o` UI until they exit (e.g. `vixl`, `less`, `bat`).
 - `file_shortcuts` attach friendly names to frequently referenced files and can
   be launched with `,fo<token>` (e.g. `,fonotes`).
 - `dir_shortcuts` map quick tokens to directories for navigation (` ,do proj`
