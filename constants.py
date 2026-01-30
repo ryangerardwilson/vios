@@ -36,7 +36,8 @@ Filtering (glob-style)
 
 Clipboard & Multi Operations
   m               Toggle mark on current item (✓) — auto-advance
-  yy              Yank (copy) marked items (or current row) into clipboard
+  y               Yank (copy) all marked items into clipboard immediately
+  yy              Yank current row into clipboard when nothing marked
   dd              Cut marked items (or current row) into clipboard
   p               Paste clipboard into selected directory (or alongside selected file)
   x               Delete marked items or current entry immediately (bypass clipboard)

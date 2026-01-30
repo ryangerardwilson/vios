@@ -100,7 +100,8 @@ python main.py
   - `Ctrl+R` — Clear filter instantly
 - **Clipboard Operations**:
   - `m` — Toggle mark to build a multi-select batch
-  - `yy` — Yank marked items (or the current row) into the clipboard
+  - `y` — Yank all marked items into the clipboard immediately
+  - `yy` — Yank the current row into the clipboard
   - `dd` — Cut marked items (or the current row) into the clipboard
   - `Backspace` / `Delete` — Immediate cut (delete without yank)
   - `x` — Delete all marked items or the current selection immediately (bypasses clipboard)
@@ -157,7 +158,8 @@ modal file browser without leaving the terminal.
 
 ### File Operations
 
-- `yy`: Copy the current row or marked items to the clipboard.
+- `y`: Copy all marked items to the clipboard in one step.
+- `yy`: Copy the current row to the clipboard when nothing is marked.
 - `dd`: Cut the current row or marked items to the clipboard.
 - `p`: Paste the clipboard into the selected directory (or alongside the selected file).
 - `x`: Delete marked items or the current selection immediately (no clipboard).
