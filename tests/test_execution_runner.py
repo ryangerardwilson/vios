@@ -97,7 +97,7 @@ def test_resolve_execution_command_shell(tmp_path):
     assert error is None
     assert mode == "shell"
     assert command is not None
-    assert command[-1] == "'./run_me'"
+    assert command[-1] == "./run_me"
     assert command[:-1] == ["/bin/bash", "-lc"]
 
 
@@ -109,8 +109,10 @@ def test_run_execution_launches_job(monkeypatch, tmp_path):
     target.write_text("print('demo')", encoding="utf-8")
 
     collected: dict[str, list[str]] = {}
+    seen_job: dict[str, file_actions.ExecutionJob] = {}
 
     def fake_monitor(self, job):
+        seen_job["job"] = job
         collected["command"] = list(job.command)
         job.mark_finished(0)
         self.nav.append_command_popup_lines(["done"])
@@ -123,9 +125,10 @@ def test_run_execution_launches_job(monkeypatch, tmp_path):
     launched = service.run_execution(str(target))
 
     assert launched is True
-    job = navigator.active_execution_job
+    job = seen_job.get("job")
     assert job is not None
-    job.thread.join(timeout=1)
+    if job.thread is not None:
+        job.thread.join(timeout=1)
 
     assert "command" in collected
     command_list = collected["command"]

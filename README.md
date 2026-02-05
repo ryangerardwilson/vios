@@ -115,7 +115,7 @@ python main.py
   - Text files (`.py`, `.txt`, `.md`, etc.) → opened in **Vim**
   - PDF files → opened in **Zathura** (if available)
   - Image files → opened externally via **swayimg**
-  - `e` — Execute the selected file using the configured Python or shell executor; output streams in a popup (`Esc` cancels)
+  - `e` — Execute the selected file using the configured Python or shell executor; output streams in a popup (`Esc` cancels). Ideal for quick scripts that do not require interactive input or backgrounding.
 - **Terminal Integration**:
   - `t` — Open terminal (Alacritty preferred, falls back to default) in current 
     directory
@@ -178,7 +178,7 @@ modal file browser without leaving the terminal.
 - Press `:` to enter command mode.
 - Run shell commands with `:!<command>` (executed in the directory you've navigated to).
 - `Enter` runs the command; `Esc` cancels.
-- Command output appears in a popup; use `j` / `k` to scroll and `Esc` to close.
+- Command and execution output appear in a popup; use `j` / `k` to scroll line by line, `Ctrl+J` / `Ctrl+K` for larger jumps, and `,j` / `,k` to jump to end/start. `Esc` cancels a running job or closes the popup once finished.
 
 ### Open Terminal & Config
 
@@ -267,6 +267,7 @@ Supported options:
     over the current UI.
   - `editor` (optional) overrides the fallback editor used for other files.
 - `executors` configure the `e` shortcut; omit to let `o` discover interpreters automatically.
+  - Works best for non-interactive scripts. Programs that expect an attached TTY, background daemons, or long-running TUIs are better launched via your terminal directly.
 If a handler command or mapping is missing, `o` simply leaves the file unopened.
 Configure viewers/editors explicitly to control how files launch.
 

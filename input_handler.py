@@ -36,6 +36,10 @@ class InputHandler:
             "rn",
             "b",
         }
+        self.popup_leader_pending = False
+        self.popup_leader_sequence = ""
+        self.popup_leader_timestamp = 0.0
+        self.popup_leader_timeout = 2.0
 
     def _check_operator_timeout(self):
         if self.pending_operator and (
@@ -666,6 +670,13 @@ class InputHandler:
     def _handle_command_popup_key(self, key) -> bool:
         job = getattr(self.nav, "active_execution_job", None)
 
+        now = time.time()
+        if self.popup_leader_pending and (
+            now - self.popup_leader_timestamp > self.popup_leader_timeout
+        ):
+            self.popup_leader_pending = False
+            self.popup_leader_sequence = ""
+
         if key == 27:
             if job and callable(getattr(job, "is_running", None)) and job.is_running():
                 try:
@@ -682,6 +693,36 @@ class InputHandler:
             if job and callable(getattr(job, "is_running", None)) and job.is_running():
                 return True
             self._close_command_popup()
+            return True
+
+        if key == ord(","):
+            self.popup_leader_pending = True
+            self.popup_leader_sequence = ""
+            self.popup_leader_timestamp = time.time()
+            return True
+
+        if self.popup_leader_pending:
+            ch = self._key_to_char(key)
+            if ch is None:
+                self.popup_leader_pending = False
+                self.popup_leader_sequence = ""
+                return True
+            self.popup_leader_sequence += ch
+            if self.popup_leader_sequence == "j":
+                self._popup_scroll_to_edge("bottom")  # type: ignore[attr-defined]
+                self.popup_leader_pending = False
+                self.popup_leader_sequence = ""
+                return True
+            if self.popup_leader_sequence == "k":
+                self._popup_scroll_to_edge("top")  # type: ignore[attr-defined]
+                self.popup_leader_pending = False
+                self.popup_leader_sequence = ""
+                return True
+            if not "j".startswith(self.popup_leader_sequence) and not "k".startswith(
+                self.popup_leader_sequence
+            ):
+                self.popup_leader_pending = False
+                self.popup_leader_sequence = ""
             return True
 
         with self.nav.command_popup_lock:
@@ -706,6 +747,24 @@ class InputHandler:
                 self.nav.need_redraw = True
             return True
 
+        if key in (curses.KEY_SR, 11):  # Ctrl+K / Shift+Up
+            jump = max(1, visible // 2)
+            new_scroll = max(0, current_scroll - jump)
+            if new_scroll != current_scroll:
+                with self.nav.command_popup_lock:
+                    self.nav.command_popup_scroll = new_scroll
+                self.nav.need_redraw = True
+            return True
+
+        if is_ctrl_j(key):  # Ctrl+J / Shift+Down
+            jump = max(1, visible // 2)
+            new_scroll = min(max_scroll, current_scroll + jump)
+            if new_scroll != current_scroll:
+                with self.nav.command_popup_lock:
+                    self.nav.command_popup_scroll = new_scroll
+                self.nav.need_redraw = True
+            return True
+
         if key in (curses.KEY_NPAGE,):
             new_scroll = min(max_scroll, current_scroll + visible)
             if new_scroll != current_scroll:
@@ -724,8 +783,22 @@ class InputHandler:
 
         return True
 
+    def _popup_scroll_to_edge(self, which: str) -> None:
+        with self.nav.command_popup_lock:
+            total_lines = len(self.nav.command_popup_lines or [])
+            visible = max(1, self.nav.command_popup_view_rows or 1)
+            max_scroll = max(0, total_lines - visible)
+            if which == "top":
+                new_scroll = 0
+            else:
+                new_scroll = max_scroll
+            self.nav.command_popup_scroll = new_scroll
+        self.nav.need_redraw = True
+
     def _close_command_popup(self) -> None:
         self.nav.close_command_popup()
+        self.popup_leader_pending = False
+        self.popup_leader_sequence = ""
 
     def _key_to_char(self, key):
         if 32 <= key <= 126:
