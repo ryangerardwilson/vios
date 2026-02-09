@@ -40,7 +40,7 @@ Clipboard & Multi Operations
   yy              Yank current row into clipboard when nothing marked
   dd              Cut marked items (or current row) into clipboard
   p               Paste clipboard into selected directory (or alongside selected file)
-  x               Delete marked items or current entry immediately (bypass clipboard)
+  x               Prompt before deleting marked items or current entry
 
 Command Mode
   :               Enter command mode

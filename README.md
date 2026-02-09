@@ -1,6 +1,6 @@
 # o
 
-`o` is a lightweight, Vim-inspired directory browser for your terminal.
+o is a lightweight, Vim-inspired directory browser for your terminal.
 Navigate directories, open files in your preferred editor, create new files,
 yank/cut/ paste, and launch terminals — all from a fast curses interface. By
 default `o` opens in a “Matrix” inspired view where each filesystem entry
@@ -98,13 +98,14 @@ python main.py
     - Press `Enter` to apply and persist
     - Press `/` again or `Esc` to cancel/clear
   - `Ctrl+R` — Clear filter instantly
+  - `v` (immediately after `/`) — Launch Vim to edit the filter text; save and quit to apply, leave empty to clear
 - **Clipboard Operations**:
   - `m` — Toggle mark to build a multi-select batch
   - `y` — Yank all marked items into the clipboard immediately
   - `yy` — Yank the current row into the clipboard
   - `dd` — Cut marked items (or the current row) into the clipboard
   - `Backspace` / `Delete` — Immediate cut (delete without yank)
-  - `x` — Delete all marked items or the current selection immediately (bypasses clipboard)
+  - `x` — Prompt to delete marked items or the current selection (type `y` then `Enter` to confirm)
   - `p` — Paste the clipboard into the selected directory (or next to the selected file)
 - **Visual Mode**:
   - `v` — Enter visual mode anchored at the current row; press `v` again to add the highlighted range to your marks (supports multiple ranges)
@@ -117,7 +118,7 @@ python main.py
   - Image files → opened externally via **swayimg**
   - `e` — Execute the selected file using the configured Python or shell executor; output streams in a popup (`Esc` cancels). Ideal for quick scripts that do not require interactive input or backgrounding.
 - **Terminal Integration**:
-  - `t` — Open terminal (Alacritty preferred, falls back to default) in current 
+  - `t` — Open terminal (Alacritty preferred, falls back to default) in current
     directory
 - **Help Screen**:
   - `?` — Toggle full-screen cheatsheet
@@ -163,7 +164,7 @@ modal file browser without leaving the terminal.
 - `yy`: Copy the current row to the clipboard when nothing is marked.
 - `dd`: Cut the current row or marked items to the clipboard.
 - `p`: Paste the clipboard into the selected directory (or alongside the selected file).
-- `x`: Delete marked items or the current selection immediately (no clipboard).
+- `x`: Prompt to delete marked items or the current selection (type `y` then `Enter` to confirm).
 - `m`: Toggle mark on the current item (auto-advances the cursor).
 
 ### Visual Mode

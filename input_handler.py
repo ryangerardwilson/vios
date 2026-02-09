@@ -4,6 +4,7 @@ import os
 import time
 import shutil
 import subprocess
+import tempfile
 from typing import List
 
 import config
@@ -380,6 +381,61 @@ class InputHandler:
         self.comma_sequence = ""
         self.nav.leader_sequence = ""
         self.nav.need_redraw = True
+
+    def _edit_filter_with_vim(self) -> None:
+        temp_path: str | None = None
+        existing = self.nav.dir_manager.filter_pattern.lstrip("/")
+
+        try:
+            with tempfile.NamedTemporaryFile(
+                "w",
+                delete=False,
+                encoding="utf-8",
+            ) as tmp:
+                temp_path = tmp.name
+                if existing:
+                    tmp.write(existing + "\n")
+
+            self.nav.status_message = "Editing filter in Vim..."
+            self.nav.need_redraw = True
+
+            opened = False
+            try:
+                opened = bool(self.nav.file_actions._open_with_vim(temp_path))
+            except Exception:
+                opened = False
+
+            if not opened:
+                self.nav.status_message = "Unable to launch vim for filter"
+                self._flash()
+                self.nav.need_redraw = True
+                return
+
+            try:
+                with open(temp_path, "r", encoding="utf-8") as reader:
+                    new_value = reader.read().strip()
+            except Exception:
+                new_value = ""
+
+            if new_value:
+                self.nav.dir_manager.filter_pattern = new_value
+                self.nav.status_message = f"Filter set: {new_value}"
+            else:
+                self.nav.dir_manager.filter_pattern = ""
+                self.nav.status_message = "Filter cleared"
+
+            self.in_filter_mode = False
+            self.nav.need_redraw = True
+        except Exception:
+            self.nav.status_message = "Failed to edit filter"
+            self._flash()
+            self.nav.need_redraw = True
+        finally:
+            if temp_path and os.path.exists(temp_path):
+                try:
+                    os.unlink(temp_path)
+                except OSError:
+                    pass
 
     def _enter_command_mode(self) -> None:
         self.nav.command_mode = True
@@ -861,6 +917,10 @@ class InputHandler:
                 return False
             if 32 <= key <= 126:
                 char = chr(key)
+                pattern = self.nav.dir_manager.filter_pattern
+                if char.lower() == "v" and pattern in {"", "/"}:
+                    self._edit_filter_with_vim()
+                    return False
                 if self.nav.dir_manager.filter_pattern == "/":
                     self.nav.dir_manager.filter_pattern = "/" + char
                 else:
@@ -1087,44 +1147,49 @@ class InputHandler:
                 if not entries:
                     self.nav.exit_visual_mode()
                     return False
-                success = True
-                dirs = set()
-                for path, _, is_dir_entry in entries:
-                    try:
-                        if is_dir_entry:
-                            shutil.rmtree(path)
-                        else:
-                            os.remove(path)
-                        dirs.add(os.path.dirname(path))
-                    except Exception:
-                        success = False
-                        break
+                if not self._prompt_delete_confirmation(entries):
+                    self.nav.status_message = "Deletion cancelled"
+                    self.nav.need_redraw = True
+                    return False
+                success, dirs = self._delete_entries(entries)
                 if success:
                     count = len(entries)
                     noun = "item" if count == 1 else "items"
                     self.nav.status_message = f"Deleted {count} {noun}"
                     self.nav.exit_visual_mode()
-                    self._notify_directories(dirs)
                 else:
                     self._flash()
+                if dirs:
+                    self._notify_directories(dirs)
                 self.nav.need_redraw = True
                 return False
 
         if key == ord("x") and total > 0 and selected_path:
-            try:
-                if selected_is_dir:
-                    shutil.rmtree(selected_path)
-                else:
-                    os.remove(selected_path)
-                self.nav.status_message = f"Deleted {selected_name}"
-            except Exception:
-                self._flash()
-            finally:
+            entry = self._normalize_entry(
+                selected_path,
+                selected_name,
+                selected_is_dir,
+            )
+            entries = [entry]
+            if not self._prompt_delete_confirmation(entries):
+                self.nav.status_message = "Deletion cancelled"
                 self.nav.need_redraw = True
-                parent_dir = os.path.dirname(
-                    selected_path or self.nav.dir_manager.current_path
-                )
-                self._notify_directories({parent_dir})
+                return False
+            success, dirs = self._delete_entries(entries)
+            parent_dir = os.path.dirname(
+                selected_path or self.nav.dir_manager.current_path
+            ) or self.nav.dir_manager.current_path
+            if success:
+                label = self._format_deletion_label(*entry)
+                self.nav.status_message = f"Deleted {label}"
+                notify_dirs = dirs or {parent_dir}
+                self._notify_directories(notify_dirs)
+            else:
+                self._flash()
+                notify_dirs = dirs or {parent_dir}
+                if notify_dirs:
+                    self._notify_directories(notify_dirs)
+            self.nav.need_redraw = True
             return False
 
         # === yy / dd operators ===
@@ -1304,23 +1369,27 @@ class InputHandler:
             self._flash()
             return
 
-        success = True
-        affected_dirs = set()
-        for full_path in list(self.nav.marked_items):
-            try:
-                if os.path.isdir(full_path):
-                    shutil.rmtree(full_path)
-                else:
-                    os.remove(full_path)
-                affected_dirs.add(os.path.dirname(full_path))
-            except Exception:
-                success = False
-                break
+        entries = self._entries_from_paths(self.nav.marked_items)
+        if not entries:
+            self._flash()
+            return
 
+        if not self._prompt_delete_confirmation(entries):
+            self.nav.status_message = "Deletion cancelled"
+            self.nav.need_redraw = True
+            return
+
+        success, affected_dirs = self._delete_entries(entries)
         if success:
             self.nav.marked_items.clear()
-            self._notify_directories(affected_dirs)
+            if affected_dirs:
+                self._notify_directories(affected_dirs)
+            count = len(entries)
+            noun = "item" if count == 1 else "items"
+            self.nav.status_message = f"Deleted {count} {noun}"
         else:
+            if affected_dirs:
+                self._notify_directories(affected_dirs)
             self._flash()
 
         self.nav.need_redraw = True
@@ -1466,6 +1535,71 @@ class InputHandler:
                 return new_name
             counter += 1
 
+    def _entry_name_for_path(self, path: str) -> str:
+        if not path:
+            return ""
+        stripped = path.rstrip(os.sep) or path
+        name = os.path.basename(stripped)
+        return name or path
+
+    def _normalize_entry(
+        self,
+        path: str,
+        name: str | None,
+        is_dir: bool | None,
+    ) -> tuple[str, str, bool]:
+        resolved_name = name if name else self._entry_name_for_path(path)
+        resolved_dir = bool(is_dir)
+        if is_dir is None:
+            resolved_dir = os.path.isdir(path)
+        return (path, resolved_name, resolved_dir)
+
+    def _entries_from_paths(self, paths) -> List[tuple[str, str, bool]]:
+        entries: List[tuple[str, str, bool]] = []
+        for full_path in sorted(paths):
+            entries.append(self._normalize_entry(full_path, None, os.path.isdir(full_path)))
+        return entries
+
+    def _format_deletion_label(self, path: str, name: str, is_dir: bool) -> str:
+        label = name or self._entry_name_for_path(path)
+        if is_dir and label and not label.endswith("/"):
+            label += "/"
+        return label or path
+
+    def _build_delete_prompt(self, entries: List[tuple[str, str, bool]]) -> str:
+        if not entries:
+            return ""
+        count = len(entries)
+        noun = "item" if count == 1 else "items"
+        return f"Delete {count} {noun}"
+
+    def _prompt_delete_confirmation(self, entries: List[tuple[str, str, bool]]) -> bool:
+        if not entries:
+            return False
+        file_actions = getattr(self.nav, "file_actions", None)
+        confirm_fn = getattr(file_actions, "prompt_confirmation", None)
+        if not callable(confirm_fn):
+            return False
+        prompt = self._build_delete_prompt(entries)
+        if not prompt:
+            return False
+        return bool(confirm_fn(prompt))
+
+    def _delete_entries(self, entries: List[tuple[str, str, bool]]):
+        affected_dirs: set[str] = set()
+        success = True
+        for path, _, _ in entries:
+            try:
+                if os.path.isdir(path):
+                    shutil.rmtree(path)
+                else:
+                    os.remove(path)
+                affected_dirs.add(os.path.dirname(path))
+            except Exception:
+                success = False
+                break
+        return success, affected_dirs
+
     def _collect_visual_entries(self, items):
         if not getattr(self.nav, "visual_mode", False):
             return []
@@ -1474,7 +1608,7 @@ class InputHandler:
         for idx in indices:
             if 0 <= idx < len(items):
                 name, is_dir, path, _ = items[idx]
-                entries.append((path, name, is_dir))
+                entries.append(self._normalize_entry(path, name, is_dir))
         return entries
 
     def _stage_visual_to_clipboard(self, entries, cut: bool) -> bool:

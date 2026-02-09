@@ -99,13 +99,12 @@ class FileActionService:
 
         try:
             stdscr.timeout(-1)
-            prompt_display = prompt[: max_x - 1] if max_x > 0 else ""
-            input_x = len(prompt_display)
+            input_x = len(prompt)
             max_input_width = max(10, max_x - input_x - 1)
 
             stdscr.move(prompt_y, 0)
             stdscr.clrtoeol()
-            stdscr.addstr(prompt_y, 0, prompt_display)
+            stdscr.addstr(prompt_y, 0, prompt)
             stdscr.refresh()
 
             while True:
@@ -124,7 +123,7 @@ class FileActionService:
 
                 stdscr.move(prompt_y, 0)
                 stdscr.clrtoeol()
-                display_str = prompt_display + input_str
+                display_str = prompt + input_str
                 stdscr.addstr(prompt_y, 0, display_str[: max_x - 1])
                 stdscr.refresh()
         except KeyboardInterrupt:
@@ -138,51 +137,6 @@ class FileActionService:
         result = input_str.strip()
         return result or None
 
-    def _prompt_for_confirmation(self, prompt: str) -> Optional[bool]:
-        stdscr_opt = self.nav.renderer.stdscr
-        if stdscr_opt is None:
-            return None
-        stdscr = cast(Any, stdscr_opt)
-
-        max_y, max_x = stdscr.getmaxyx()
-        if max_y < 2 or max_x < 20:
-            curses.flash()
-            self.nav.need_redraw = True
-            return None
-
-        prompt_y = max_y - 1
-        prompt_display = prompt[: max_x - 1] if max_x > 0 else ""
-
-        stdscr.move(prompt_y, 0)
-        stdscr.clrtoeol()
-        try:
-            stdscr.addstr(prompt_y, 0, prompt_display)
-        except curses.error:
-            pass
-
-        try:
-            stdscr.timeout(-1)
-            stdscr.refresh()
-            while True:
-                key = stdscr.getch()
-                if key in (ord("y"), ord("Y")):
-                    return True
-                if key in (ord("q"), ord("Q")):
-                    try:
-                        curses.ungetch(key)
-                    except curses.error:
-                        pass
-                    return False
-                if key in (ord("n"), ord("N"), 27):
-                    return False
-        except KeyboardInterrupt:
-            return False
-        except Exception:
-            return None
-        finally:
-            stdscr.timeout(40)
-            self.nav.need_redraw = True
-
     def prompt_confirmation(self, message: str) -> bool:
         message = message.strip()
         if not message:
@@ -190,10 +144,11 @@ class FileActionService:
         if message[-1] not in "?:":
             message = f"{message}?"
         prompt = f"{message} (y/N): "
-        response = self._prompt_for_confirmation(prompt)
+        response = self._prompt_for_input(prompt)
         if response is None:
             return False
-        return response
+        normalized = response.strip().lower()
+        return normalized in {"y", "yes"}
 
     # === File operations ===
     def open_file(self, filepath: str):
