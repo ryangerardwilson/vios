@@ -1631,6 +1631,8 @@ class InputHandler:
         self.nav.status_message = f"{action} {count} {noun} to clipboard"
         self.nav.exit_visual_mode()
         if cut:
+            for path, _, _ in entries:
+                self.nav.marked_items.discard(path)
             dirs = {os.path.dirname(path) for path, _, _ in entries}
             self._notify_directories(dirs)
         return True
