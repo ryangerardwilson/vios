@@ -140,7 +140,7 @@ def _parse_args(
     if save_mode and multi_select:
         raise ValueError("-s cannot be used with -m")
 
-    if picker_mode:
+    if picker_mode or save_mode:
         if not start_path:
             start_path = os.path.expanduser("~")
         if picker_allowed is None:
