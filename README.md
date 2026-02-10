@@ -61,6 +61,18 @@ python main.py
 
 ## Usage
 
+### Reveal mode
+
+Open a folder and highlight a target item (useful for "Show in folder" integrations):
+
+```bash
+o -r /path/to/file
+o -r /path/to/folder
+o -r file:///path/to/file
+```
+
+- `-r <path>`: start in the parent directory (or the directory itself) and focus the target item.
+
 ### Picker mode
 
 Use picker mode when another app needs a file or directory selection via the

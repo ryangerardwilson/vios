@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 from typing import Sequence
+from urllib.parse import urlparse, unquote
 
 from orchestrator import Orchestrator
 from core_navigator import PickerOptions
@@ -28,7 +29,8 @@ def _print_help() -> None:
         "  o            Launch the TUI\n"
         "  o -h         Show this help\n"
         "  o -v         Show installed version\n"
-        "  o -u         Reinstall latest release if a newer version exists\n\n"
+        "  o -u         Reinstall latest release if a newer version exists\n"
+        "  o -r PATH    Reveal PATH (open folder, highlight item)\n\n"
         "Picker mode:\n"
         "  -p [dir]     Start picker mode (defaults to ~/)\n"
         "  -s [dir]     Save mode (pick output path)\n"
@@ -76,7 +78,7 @@ def _run_upgrade() -> int:
 
 def _parse_args(
     argv: Sequence[str],
-) -> tuple[bool, bool, bool, PickerOptions | None, str | None]:
+) -> tuple[bool, bool, bool, PickerOptions | None, str | None, str | None]:
     show_help = False
     show_version = False
     do_upgrade = False
@@ -87,6 +89,7 @@ def _parse_args(
     save_mode = False
     save_extensions_set = False
     start_path: str | None = None
+    reveal_path: str | None = None
 
     i = 0
     while i < len(argv):
@@ -135,12 +138,20 @@ def _parse_args(
             save_extensions_set = True
         elif arg == "-m":
             multi_select = True
+        elif arg == "-r":
+            if i + 1 >= len(argv) or argv[i + 1].startswith("-"):
+                raise ValueError("-r requires a path")
+            i += 1
+            reveal_path = argv[i]
         else:
             raise ValueError(f"Unknown flag '{arg}'")
         i += 1
 
     if picker_mode and save_mode:
         raise ValueError("-p cannot be used with -s")
+
+    if reveal_path and (picker_mode or save_mode):
+        raise ValueError("-r cannot be used with -p or -s")
 
     if save_extensions_set and not save_mode:
         raise ValueError("-se requires -s")
@@ -161,6 +172,16 @@ def _parse_args(
         if picker_allowed is None:
             picker_allowed = "any"
 
+    if reveal_path:
+        parsed = urlparse(reveal_path)
+        if parsed.scheme == "file":
+            reveal_path = unquote(parsed.path)
+        reveal_path = os.path.realpath(os.path.expanduser(reveal_path))
+        if os.path.isdir(reveal_path):
+            start_path = reveal_path
+        else:
+            start_path = os.path.dirname(reveal_path) or os.path.expanduser("~")
+
     picker_options = None
     if picker_mode or save_mode:
         picker_options = PickerOptions(
@@ -169,17 +190,18 @@ def _parse_args(
             multi_select=multi_select,
             mode="save" if save_mode else "pick",
         )
-    return show_help, show_version, do_upgrade, picker_options, start_path
+    return show_help, show_version, do_upgrade, picker_options, start_path, reveal_path
 
 
 def main(argv: list[str] | None = None) -> int:
     args = sys.argv[1:] if argv is None else argv
     picker_options = None
     start_path = None
+    reveal_path = None
 
     if args:
         try:
-            show_help, show_version, do_upgrade, picker_options, start_path = (
+            show_help, show_version, do_upgrade, picker_options, start_path, reveal_path = (
                 _parse_args(args)
             )
         except ValueError as exc:
@@ -196,7 +218,11 @@ def main(argv: list[str] | None = None) -> int:
             return _run_upgrade()
 
     start_dir = start_path or os.getcwd()
-    orchestrator = Orchestrator(start_path=start_dir, picker_options=picker_options)
+    orchestrator = Orchestrator(
+        start_path=start_dir,
+        picker_options=picker_options,
+        reveal_path=reveal_path,
+    )
     orchestrator.run()
 
     if picker_options is not None:

@@ -23,7 +23,12 @@ class PickerOptions:
 
 
 class FileNavigator:
-    def __init__(self, start_path: str, picker_options: Optional[PickerOptions] = None):
+    def __init__(
+        self,
+        start_path: str,
+        picker_options: Optional[PickerOptions] = None,
+        reveal_path: Optional[str] = None,
+    ):
         self.dir_manager = DirectoryManager(start_path)
         self.clipboard = ClipboardManager()
 
@@ -84,6 +89,12 @@ class FileNavigator:
         # Command-mode history of successful shell invocations
         self.command_history: List[str] = []
         self.command_history_index: Optional[int] = None
+
+        self.reveal_target: Optional[str] = None
+        if reveal_path:
+            self.reveal_target = os.path.realpath(reveal_path)
+        if self.reveal_target:
+            self._apply_reveal_selection()
 
         if self.picker_options and self.picker_options.extensions:
             globs = [f"*.{ext}" for ext in self.picker_options.extensions]
@@ -218,6 +229,18 @@ class FileNavigator:
                 self._append_expanded(path, 1, display)
 
         return display
+
+    def _apply_reveal_selection(self) -> None:
+        target = self.reveal_target
+        if not target:
+            return
+
+        items = self.build_display_items()
+        for idx, (_, _is_dir, path, _depth) in enumerate(items):
+            if os.path.realpath(path) == target:
+                self.browser_selected = idx
+                self.update_visual_active(self.browser_selected)
+                return
 
     def _append_expanded(self, base_path: str, depth: int, collection: list):
         children = self.dir_manager.list_directory(base_path)

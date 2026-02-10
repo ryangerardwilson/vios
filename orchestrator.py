@@ -11,20 +11,27 @@ class Orchestrator:
         start_path: Optional[str] = None,
         navigator_factory: Optional[Callable[[str], Any]] = None,
         picker_options: Optional[Any] = None,
+        reveal_path: Optional[str] = None,
     ):
         self.start_path = os.path.realpath(start_path or os.getcwd())
         self.navigator_factory = navigator_factory or FileNavigator
         self.navigator: Optional[Any] = None
         self.picker_options = picker_options
+        self.reveal_path = reveal_path
 
     def setup(self) -> None:
         if self.navigator is None:
             try:
                 self.navigator = self.navigator_factory(
-                    self.start_path, self.picker_options
+                    self.start_path, self.picker_options, self.reveal_path
                 )
             except TypeError:
-                self.navigator = self.navigator_factory(self.start_path)
+                try:
+                    self.navigator = self.navigator_factory(
+                        self.start_path, self.picker_options
+                    )
+                except TypeError:
+                    self.navigator = self.navigator_factory(self.start_path)
 
     def _curses_main(self, stdscr) -> None:
         assert self.navigator is not None
