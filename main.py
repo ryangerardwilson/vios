@@ -273,7 +273,12 @@ def main(argv: list[str] | None = None) -> int:
             return _run_upgrade()
 
     start_dir = start_path or os.getcwd()
-    if reveal_path and not os.environ.get(REVEAL_ENV) and not sys.stdin.isatty():
+    if (
+        reveal_path
+        and not os.environ.get(REVEAL_ENV)
+        and not (sys.stdin.isatty() or sys.stdout.isatty())
+        and not os.environ.get("TERM")
+    ):
         if _launch_reveal_terminal(reveal_path):
             return 0
 
