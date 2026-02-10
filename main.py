@@ -34,7 +34,8 @@ def _print_help() -> None:
         "  -s [dir]     Save mode (pick output path)\n"
         "  -ld          Limit selection to directories\n"
         "  -lf [exts]   Limit selection to files, optional extensions\n"
-        "  -m           Allow multi-select via marks"
+        "  -m           Allow multi-select via marks\n"
+        "  -se [ext]    Save extension (save mode only)"
     )
 
 
@@ -84,6 +85,7 @@ def _parse_args(
     extensions: list[str] = []
     multi_select = False
     save_mode = False
+    save_extensions_set = False
     start_path: str | None = None
 
     i = 0
@@ -121,6 +123,16 @@ def _parse_args(
                     for part in raw.replace(";", ",").split(",")
                 ]
                 extensions = sorted({part.lower() for part in parts if part})
+        elif arg == "-se":
+            if i + 1 >= len(argv) or argv[i + 1].startswith("-"):
+                raise ValueError("-se requires an extension")
+            i += 1
+            raw = argv[i]
+            parts = [
+                part.strip().lstrip(".") for part in raw.replace(";", ",").split(",")
+            ]
+            extensions = sorted({part.lower() for part in parts if part})
+            save_extensions_set = True
         elif arg == "-m":
             multi_select = True
         else:
@@ -129,6 +141,9 @@ def _parse_args(
 
     if picker_mode and save_mode:
         raise ValueError("-p cannot be used with -s")
+
+    if save_extensions_set and not save_mode:
+        raise ValueError("-se requires -s")
 
     if any([picker_allowed, multi_select, start_path, extensions]):
         if not picker_mode and not save_mode:
