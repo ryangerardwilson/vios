@@ -208,5 +208,22 @@ if ! $no_modify_path && [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
   fi
 fi
 
+desktop_entry="$HOME/.local/share/applications/o-reveal.desktop"
+mkdir -p "$(dirname "$desktop_entry")"
+cat > "$desktop_entry" <<EOF
+[Desktop Entry]
+Type=Application
+Name=o (Reveal)
+Exec=${INSTALL_DIR}/${APP} -r %u
+TryExec=${INSTALL_DIR}/${APP}
+Terminal=true
+NoDisplay=true
+MimeType=inode/directory;x-scheme-handler/file;
+EOF
+
+if command -v update-desktop-database >/dev/null 2>&1; then
+  update-desktop-database "$HOME/.local/share/applications" >/dev/null 2>&1 || true
+fi
+
 info "Installed ${APP^^} (${installed_label:-unknown}) to $INSTALL_DIR/$APP"
 info "Run: ${APP} -h"
