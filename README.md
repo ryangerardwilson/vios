@@ -267,6 +267,8 @@ Supported options:
       "image_viewer": { "commands": [["swayimg"]] },
       "csv_viewer": { "commands": [["vixl"]], "is_internal": true },
       "parquet_viewer": { "commands": [["vixl"]], "is_internal": true },
+      "h5_viewer": { "commands": [["h5ls"]], "is_internal": true },
+      "xlsx_viewer": { "commands": [["libreoffice", "--calc"]] },
       "editor": { "commands": [["vim"]] }
     },
     "executors": {
@@ -281,9 +283,10 @@ Supported options:
     command exits). Leave it as `false` or omit it to launch the command in a
     new terminal or background process, preserving the existing UI behaviour.
   - `pdf_viewer` and `image_viewer` control the viewers for PDFs and images.
-  - `csv_viewer` and `parquet_viewer` default to external terminals; flip
-    `is_internal` to `true` if you prefer terminal-native tools that should take
-    over the current UI.
+  - `csv_viewer`, `parquet_viewer`, and `h5_viewer` default to external terminals;
+    flip `is_internal` to `true` if you prefer terminal-native tools that should
+    take over the current UI.
+  - `xlsx_viewer` opens `.xlsx` spreadsheets.
   - `editor` (optional) overrides the fallback editor used for other files.
 - `executors` configure the `e` shortcut; omit to let `o` discover interpreters automatically.
   - Works best for non-interactive scripts. Programs that expect an attached TTY, background daemons, or long-running TUIs are better launched via your terminal directly.
@@ -299,7 +302,9 @@ Reference template:
     "pdf_viewer": { "commands": [["evince"]] },
     "image_viewer": { "commands": [["feh"]] },
     "csv_viewer": { "commands": [["libreoffice", "--calc"]] },
-    "parquet_viewer": { "commands": [["db-browser-for-sqlite"]] }
+    "parquet_viewer": { "commands": [["db-browser-for-sqlite"]] },
+    "h5_viewer": { "commands": [["h5ls"]], "is_internal": true },
+    "xlsx_viewer": { "commands": [["libreoffice", "--calc"]] }
   },
   "executors": {
     "python": "/usr/bin/python3",
@@ -320,7 +325,9 @@ adapt it to your own tools and directory structure:
     "pdf_viewer": { "commands": [["evince"]] },
     "image_viewer": { "commands": [["feh"]] },
     "csv_viewer": { "commands": [["libreoffice", "--calc"]] },
-    "parquet_viewer": { "commands": [["db-browser-for-sqlite"]] }
+    "parquet_viewer": { "commands": [["db-browser-for-sqlite"]] },
+    "h5_viewer": { "commands": [["h5ls"]], "is_internal": true },
+    "xlsx_viewer": { "commands": [["libreoffice", "--calc"]] }
   }
 }
 ```
@@ -336,6 +343,8 @@ adapt it to your own tools and directory structure:
   - `csv_viewer`: sends CSV files to LibreOffice Calc.
   - `parquet_viewer`: launches a Parquet-friendly tool (replace with whatever you
     use).
+  - `h5_viewer`: opens `.h5` files (example uses `h5ls` inside the terminal).
+  - `xlsx_viewer`: opens `.xlsx` files (example uses LibreOffice Calc).
   - Set `is_internal` to `true` for terminal-native tools that should replace the
     current `o` UI until they exit (e.g. `vixl`, `less`, `bat`).
 Feel free to swap out the sample applications (Evince, Feh, LibreOffice, etc.)

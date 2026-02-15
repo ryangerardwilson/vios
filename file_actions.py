@@ -240,21 +240,34 @@ class FileActionService:
 
         mime_type, _ = mimetypes.guess_type(filepath)
         _, ext = os.path.splitext(filepath)
+        ext_lower = ext.lower()
 
         handled = False
         is_text_like = False
         try:
-            if ext == ".csv":
+            if ext_lower == ".csv":
                 handled = self._invoke_handler(
                     self.nav.config.get_handler_spec("csv_viewer"),
                     filepath,
                     default_strategy="terminal",
                 )
-            elif ext == ".parquet":
+            elif ext_lower == ".parquet":
                 handled = self._invoke_handler(
                     self.nav.config.get_handler_spec("parquet_viewer"),
                     filepath,
                     default_strategy="terminal",
+                )
+            elif ext_lower == ".h5":
+                handled = self._invoke_handler(
+                    self.nav.config.get_handler_spec("h5_viewer"),
+                    filepath,
+                    default_strategy="terminal",
+                )
+            elif ext_lower == ".xlsx":
+                handled = self._invoke_handler(
+                    self.nav.config.get_handler_spec("xlsx_viewer"),
+                    filepath,
+                    default_strategy="external_background",
                 )
             elif mime_type == "application/pdf":
                 handled = self._invoke_handler(
@@ -271,7 +284,7 @@ class FileActionService:
             else:
                 is_text_like = bool(
                     (mime_type and mime_type.startswith("text/"))
-                    or ext.lower()
+                    or ext_lower
                     in {
                         ".py",
                         ".txt",
