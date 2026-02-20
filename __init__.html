@@ -1,0 +1,209 @@
+<!doctype html>
+<html data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      :root[data-theme="dark"] {
+        --body-background: #0a0a0a;
+        --body-text: #d0d0d0;
+        --title-color: #e6e6e6;
+        --h1-color: #dedede;
+        --h2-color: #d9d9d9;
+        --h3-color: #d4d4d4;
+        --body-color: #d0d0d0;
+        --toc-color: #bfbfbf;
+        --latex-color: #d0d0d0;
+        --toggle-bg: rgba(18, 18, 18, 0.9);
+        --toggle-text: #d0d0d0;
+        --toggle-border: rgba(255, 255, 255, 0.12);
+        --toggle-active-bg: #e6e6e6;
+        --toggle-active-text: #0a0a0a;
+      }
+      :root[data-theme="light"] {
+        --body-background: #ffffff;
+        --body-text: #1f1f1f;
+        --title-color: #111111;
+        --h1-color: #1a1a1a;
+        --h2-color: #202020;
+        --h3-color: #242424;
+        --body-color: #1f1f1f;
+        --toc-color: #3a3a3a;
+        --latex-color: #1f1f1f;
+        --toggle-bg: rgba(250, 250, 250, 0.9);
+        --toggle-text: #1f1f1f;
+        --toggle-border: rgba(0, 0, 0, 0.12);
+        --toggle-active-bg: #111111;
+        --toggle-active-text: #ffffff;
+      }
+      body {
+        margin: 0;
+        background: var(--body-background);
+        color: var(--body-text);
+        font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+      }
+      main {
+        max-width: 960px;
+        margin: 32px auto;
+        padding: 0 24px 80px;
+      }
+      .block {
+        padding: 16px 20px;
+        margin: 0;
+      }
+      .block-title { font-size: 28px; font-weight: 600; color: var(--title-color); }
+      .block-h1 { font-size: 20px; font-weight: 600; color: var(--h1-color); }
+      .block-h2 { font-size: 16px; font-weight: 600; color: var(--h2-color); }
+      .block-h3 { font-size: 14px; font-weight: 600; color: var(--h3-color); }
+      .block-body { font-size: 13px; line-height: 1.6; color: var(--body-color); white-space: pre-wrap; }
+      .block-toc { font-size: 13px; color: var(--toc-color); white-space: pre-wrap; }
+      .block-toc a { color: inherit; text-decoration: none; }
+      .block-toc a:visited { color: inherit; }
+      .block-toc a:hover { text-decoration: underline; }
+      .toc-index { font-size: 14px; font-weight: 600; color: var(--h3-color); margin-bottom: 4px; }
+      .toc-empty { color: var(--toc-color); }
+      .toc-line { display: block; line-height: 0.2; margin: 0; }
+      .toc-line.depth-2 { padding-left: 16px; }
+      .toc-line.depth-3 { padding-left: 32px; }
+      .block-pyimage { text-align: center; }
+      .block-pyimage img { max-width: 100%; height: auto; display: inline-block; }
+      :root[data-theme="dark"] .block-pyimage img.light { display: none; }
+      :root[data-theme="light"] .block-pyimage img.dark { display: none; }
+      .block-three canvas { width: 100%; height: 300px; display: block; }
+      .block-latex { font-size: 20px; color: var(--latex-color); }
+      .theme-toggle {
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        display: inline-flex;
+        gap: 6px;
+        padding: 6px;
+        border-radius: 999px;
+        background: var(--toggle-bg);
+        color: var(--toggle-text);
+        border: 1px solid var(--toggle-border);
+        font-size: 12px;
+        z-index: 10;
+        backdrop-filter: blur(6px);
+      }
+      .theme-toggle button {
+        border: none;
+        background: transparent;
+        color: inherit;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font: inherit;
+        cursor: pointer;
+      }
+      .theme-toggle button.active {
+        background: var(--toggle-active-bg);
+        color: var(--toggle-active-text);
+      }
+      .block-map { height: 320px; }
+      .block-map > div { height: 100%; }
+      .block-map .map-pane { width: 100%; height: 100%; }
+      :root[data-theme="dark"] .block-map .map-pane.light { display: none; }
+      :root[data-theme="light"] .block-map .map-pane.dark { display: none; }
+    </style>
+  </head>
+  <body>
+    <div class="theme-toggle" role="group" aria-label="Theme toggle">
+      <button type="button" data-theme="dark">Dark</button>
+      <button type="button" data-theme="light">Light</button>
+    </div>
+    <main>
+
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+      const themeDefault = 'dark';
+      const themeStorageKey = 'gvim-theme';
+      const root = document.documentElement;
+      const toggleButtons = document.querySelectorAll('.theme-toggle button');
+      const getStoredTheme = () => {
+        try { return localStorage.getItem(themeStorageKey); } catch (err) { return null; }
+      };
+      const setStoredTheme = (value) => {
+        try { localStorage.setItem(themeStorageKey, value); } catch (err) {}
+      };
+      const applyTheme = (value) => {
+        root.dataset.theme = value;
+        toggleButtons.forEach((btn) => {
+          btn.classList.toggle('active', btn.dataset.theme === value);
+        });
+      };
+      const preferredTheme = getStoredTheme() || themeDefault;
+      applyTheme(preferredTheme);
+      const latexBlocks = [];
+      const mapBlocksDark = [];
+      const mapBlocksLight = [];
+      for (const [id, src] of latexBlocks) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        try { katex.render(src, el, { throwOnError: false, displayMode: true }); }
+        catch (err) { el.textContent = String(err); }
+      }
+      for (const [id, src] of mapBlocksDark) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        const map = L.map(el, { zoomControl: false, attributionControl: true });
+        const tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap contributors &copy; CARTO' }).addTo(map);
+        try {
+          const fn = new Function('L', 'map', 'tileLayer', src);
+          fn(L, map, tileLayer);
+        } catch (err) {
+          el.textContent = String(err);
+        }
+      }
+      for (const [id, src] of mapBlocksLight) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        const map = L.map(el, { zoomControl: false, attributionControl: true });
+        const tileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap contributors &copy; CARTO' }).addTo(map);
+        try {
+          const fn = new Function('L', 'map', 'tileLayer', src);
+          fn(L, map, tileLayer);
+        } catch (err) {
+          el.textContent = String(err);
+        }
+      }
+      toggleButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const value = btn.dataset.theme;
+          applyTheme(value);
+          setStoredTheme(value);
+        });
+      });
+      let scrollDelta = 0;
+      let scrollScheduled = false;
+      const flushScroll = () => {
+        window.scrollBy({ top: scrollDelta, left: 0, behavior: 'auto' });
+        scrollDelta = 0;
+        scrollScheduled = false;
+      };
+      document.addEventListener('keydown', (event) => {
+        const tag = event.target && event.target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || event.target.isContentEditable) return;
+        if (event.key === 'j') {
+          event.preventDefault();
+          scrollDelta += 80;
+        } else if (event.key === 'k') {
+          event.preventDefault();
+          scrollDelta -= 80;
+        } else {
+          return;
+        }
+        if (!scrollScheduled) {
+          scrollScheduled = true;
+          requestAnimationFrame(flushScroll);
+        }
+      });
+    </script>
+  </body>
+</html>

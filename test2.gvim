@@ -1,0 +1,143 @@
+# GVIM v1
+::text
+kind: title
+Documentation Title
+::text
+kind: toc
+
+::text
+kind: h1
+1111Navigation
+::text
+kind: body
+Use j/k to move between blocks.
+Press Enter to edit the selected block in Vim.
+Exit Vim to refresh the block content.
+Press ? to show the shortcuts panel.
+::text
+kind: h1
+Heading 1
+::text
+kind: body
+Heading 1 is for top-level sections.
+Use it to structure the document into major parts.
+::text
+kind: h2
+Heading 2
+::text
+kind: body
+You can structure documents with three heading levels.
+Use ,bh1, ,bh2, and ,bh3 for hierarchy.
+::text
+kind: h3
+Heading 3
+::text
+kind: body
+Heading 3 is useful for fine-grained sections.
+Use it sparingly for subtopics.
+::text
+kind: h1
+Three.js blocks
+::text
+kind: body
+Three.js blocks are JS modules with THREE, scene, camera,
+renderer, and canvas pre-wired.
+Use them for real-time 3D scenes.
+::three
+// GVIM Three.js block (module JS)
+// You can use scene, camera, renderer, canvas, and THREE.
+const geometry = new THREE.BoxGeometry(1, 1, 1);
+const material = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.3, roughness: 0.4 });
+const cube = new THREE.Mesh(geometry, material);
+scene.add(cube);
+const light = new THREE.DirectionalLight(0xffffff, 1);
+light.position.set(2, 3, 4);
+scene.add(light);
+camera.position.z = 3;
+function animate() {
+  requestAnimationFrame(animate);
+  cube.rotation.x += 0.01;
+  cube.rotation.y += 0.015;
+  renderer.render(scene, camera);
+}
+animate();
+::text
+kind: h1
+LaTeX blocks
+::text
+kind: body
+LaTeX blocks render with KaTeX in a WebKit view.
+Edit the LaTeX source directly.
+::latex
+\int_0^\infty e^{-x^2} dx = \frac{\sqrt{\pi}}{2}
+::text
+kind: h1
+Map blocks
+::text
+kind: body
+Map blocks run Leaflet JS with L, map, and tileLayer globals.
+Use them to plot points, shapes, and paths on a dark basemap.
+::map
+// Leaflet globals: L, map, tileLayer
+const points = [
+  [40.7484, -73.9857],
+  [51.5072, -0.1276],
+  [48.8566, 2.3522],
+];
+points.forEach(([lat, lon]) => {
+  L.circleMarker([lat, lon], {
+    radius: 5,
+    color: '#d0d0d0',
+    fillColor: '#d0d0d0',
+    fillOpacity: 0.9,
+  }).addTo(map);
+});
+const bounds = L.latLngBounds(points);
+map.fitBounds(bounds.pad(0.2));
+::text
+kind: h1
+Python render blocks
+::text
+kind: body
+Python blocks render to SVG via __gvim__.renderer.
+They are rendered at runtime for export.
+::pyimage
+format: svg
+# PYIMAGE_BLOCK
+import numpy as np
+plot_func(
+    x=np.linspace(-5, 5, 100),
+    y1=lambda x: 0.5 * x + 1,
+    y2=lambda x: 0.3 * x + 2,
+    y3_custom=lambda x: np.sin(x),
+    title="My Plot"
+)
+
+"""
+HELPER DOCS 
+-----------
+
+plot_coord((2, 3), (4, 5), title="My Plot")
+# Types: 
+- plot_coord: coords = tuple[float, float]
+- title = str | None
+
+plot_func(
+    x=np.linspace(-5, 5, 100),
+    y1=lambda x: 0.5 * x + 1,
+    y2=lambda x: 0.3 * x + 2,
+    y3_custom_name=lambda x: 0.4 * x + 4,
+    title="My Plot"
+)
+# Types: 
+- plot_func: x = sequence[float] 
+- y* = sequence[float] or callable(x) -> sequence[float]
+- title = str | None
+"""
+::text
+kind: h3
+Notes
+::text
+kind: body
+- No inline mixing; each block is its own unit.
+- Vim runs externally; GTK stays focused on layout.
