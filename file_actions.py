@@ -100,6 +100,18 @@ class FileActionService:
                 return candidate
         return self.nav.dir_manager.current_path
 
+    def _select_media_handler_spec(self, kind: str) -> HandlerSpec:
+        if kind not in {"audio", "video"}:
+            return HandlerSpec(commands=[], is_internal=False)
+
+        primary_name = f"{kind}_player"
+        primary = self.nav.config.get_handler_spec(primary_name)
+        if primary.commands:
+            return primary
+
+        # Backward compatibility for older configs.
+        return self.nav.config.get_handler_spec("media_player")
+
     @staticmethod
     def _is_word_char(ch: str) -> bool:
         return ch.isalnum() or ch == "_"
@@ -428,14 +440,19 @@ class FileActionService:
                     filepath,
                     default_strategy="external_background",
                 )
-            elif (
-                (mime_type and mime_type.startswith("audio/"))
-                or (mime_type and mime_type.startswith("video/"))
-                or (ext_lower in MEDIA_AUDIO_EXTENSIONS)
-                or (ext_lower in MEDIA_VIDEO_EXTENSIONS)
+            elif (mime_type and mime_type.startswith("audio/")) or (
+                ext_lower in MEDIA_AUDIO_EXTENSIONS
             ):
                 handled = self._invoke_handler(
-                    self.nav.config.get_handler_spec("media_player"),
+                    self._select_media_handler_spec("audio"),
+                    filepath,
+                    default_strategy="external_background",
+                )
+            elif (mime_type and mime_type.startswith("video/")) or (
+                ext_lower in MEDIA_VIDEO_EXTENSIONS
+            ):
+                handled = self._invoke_handler(
+                    self._select_media_handler_spec("video"),
                     filepath,
                     default_strategy="external_background",
                 )

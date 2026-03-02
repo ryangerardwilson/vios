@@ -269,7 +269,8 @@ Supported options:
       "parquet_viewer": { "commands": [["vixl"]], "is_internal": true },
       "h5_viewer": { "commands": [["h5ls"]], "is_internal": true },
       "xlsx_viewer": { "commands": [["libreoffice", "--calc"]] },
-      "media_player": { "commands": [["ffplay", "-nodisp", "-autoexit"]] },
+      "audio_player": { "commands": [["ffplay", "-nodisp", "-autoexit"]] },
+      "video_player": { "commands": [["mpv"]] },
       "editor": { "commands": [["vim"]] }
     },
     "executors": {
@@ -284,7 +285,9 @@ Supported options:
     command exits). Leave it as `false` or omit it to launch the command in a
     new terminal or background process, preserving the existing UI behaviour.
   - `pdf_viewer` and `image_viewer` control the viewers for PDFs and images.
-  - `media_player` opens audio/video files (for example `.mp3`, `.flac`, `.wav`, `.mp4`).
+  - `audio_player` opens audio files (for example `.mp3`, `.flac`, `.wav`).
+  - `video_player` opens video files (for example `.mp4`, `.mkv`, `.webm`).
+  - `media_player` is still accepted as a fallback if `audio_player` / `video_player` are not configured.
   - `csv_viewer`, `parquet_viewer`, and `h5_viewer` default to external terminals;
     flip `is_internal` to `true` if you prefer terminal-native tools that should
     take over the current UI.
@@ -307,7 +310,8 @@ Reference template:
     "parquet_viewer": { "commands": [["db-browser-for-sqlite"]] },
     "h5_viewer": { "commands": [["h5ls"]], "is_internal": true },
     "xlsx_viewer": { "commands": [["libreoffice", "--calc"]] },
-    "media_player": { "commands": [["ffplay", "-nodisp", "-autoexit"]] }
+    "audio_player": { "commands": [["ffplay", "-nodisp", "-autoexit"]] },
+    "video_player": { "commands": [["mpv"]] }
   },
   "executors": {
     "python": "/usr/bin/python3",
@@ -331,7 +335,8 @@ adapt it to your own tools and directory structure:
     "parquet_viewer": { "commands": [["db-browser-for-sqlite"]] },
     "h5_viewer": { "commands": [["h5ls"]], "is_internal": true },
     "xlsx_viewer": { "commands": [["libreoffice", "--calc"]] },
-    "media_player": { "commands": [["ffplay", "-nodisp", "-autoexit"]] }
+    "audio_player": { "commands": [["ffplay", "-nodisp", "-autoexit"]] },
+    "video_player": { "commands": [["mpv"]] }
   }
 }
 ```
@@ -349,7 +354,8 @@ adapt it to your own tools and directory structure:
     use).
   - `h5_viewer`: opens `.h5` files (example uses `h5ls` inside the terminal).
   - `xlsx_viewer`: opens `.xlsx` files (example uses LibreOffice Calc).
-  - `media_player`: opens audio/video files (example uses `ffplay`).
+  - `audio_player`: opens audio files.
+  - `video_player`: opens video files.
   - Set `is_internal` to `true` for terminal-native tools that should replace the
     current `o` UI until they exit (e.g. `vixl`, `less`, `bat`).
 Feel free to swap out the sample applications (Evince, Feh, LibreOffice, etc.)
