@@ -100,7 +100,76 @@ class FileActionService:
                 return candidate
         return self.nav.dir_manager.current_path
 
-    def _prompt_for_input(self, prompt: str) -> Optional[str]:
+    @staticmethod
+    def _is_word_char(ch: str) -> bool:
+        return ch.isalnum() or ch == "_"
+
+    def _move_word_left(self, text: str, cursor: int) -> int:
+        i = max(0, min(cursor, len(text)))
+        while i > 0 and not self._is_word_char(text[i - 1]):
+            i -= 1
+        while i > 0 and self._is_word_char(text[i - 1]):
+            i -= 1
+        return i
+
+    def _move_word_right(self, text: str, cursor: int) -> int:
+        n = len(text)
+        i = max(0, min(cursor, n))
+        while i < n and not self._is_word_char(text[i]):
+            i += 1
+        while i < n and self._is_word_char(text[i]):
+            i += 1
+        return i
+
+    def _delete_prev_word(self, text: str, cursor: int) -> Tuple[str, int]:
+        if cursor <= 0:
+            return text, cursor
+        start = self._move_word_left(text, cursor)
+        return text[:start] + text[cursor:], start
+
+    def _read_key_with_meta(self, stdscr: Any) -> Tuple[int, Optional[int]]:
+        key = stdscr.getch()
+        if key != 27:
+            return key, None
+
+        # Distinguish bare ESC (cancel) from Alt/Meta key sequences.
+        stdscr.timeout(25)
+        next_key = stdscr.getch()
+        stdscr.timeout(-1)
+        if next_key == -1:
+            return 27, None
+        return 27, next_key
+
+    def _render_prompt_input(
+        self,
+        stdscr: Any,
+        prompt_y: int,
+        max_x: int,
+        prompt_display: str,
+        text: str,
+        cursor: int,
+    ) -> None:
+        available = max(1, max_x - len(prompt_display) - 1)
+        max_start = max(0, len(text) - available)
+        viewport_start = max(0, cursor - available + 1)
+        if cursor < viewport_start:
+            viewport_start = cursor
+        if viewport_start > max_start:
+            viewport_start = max_start
+        visible = text[viewport_start : viewport_start + available]
+        cursor_screen_x = min(max_x - 1, len(prompt_display) + (cursor - viewport_start))
+
+        stdscr.move(prompt_y, 0)
+        stdscr.clrtoeol()
+        stdscr.addstr(prompt_y, 0, prompt_display)
+        if visible:
+            stdscr.addstr(prompt_y, len(prompt_display), visible)
+        stdscr.move(prompt_y, cursor_screen_x)
+        stdscr.refresh()
+
+    def _prompt_for_input(
+        self, prompt: str, initial_text: str = "", *, strip_result: bool = True
+    ) -> Optional[str]:
         stdscr_opt = self.nav.renderer.stdscr
         if stdscr_opt is None:
             return None
@@ -114,55 +183,106 @@ class FileActionService:
             return None
 
         prompt_y = max_y - 1
-        input_str = ""
+        prompt_display = prompt[: max_x - 1] if max_x > 0 else ""
+        max_input_width = max(10, max_x - len(prompt_display) - 1)
+        text = initial_text[:max_input_width]
+        cursor = len(text)
 
         stdscr.move(prompt_y, 0)
         stdscr.clrtoeol()
 
-        try:
-            stdscr.addstr(prompt_y, 0, prompt[: max_x - 1])
-        except curses.error:
-            pass
-
+        leaveok_changed = False
         try:
             stdscr.timeout(-1)
-            prompt_display = prompt[: max_x - 1] if max_x > 0 else ""
-            input_x = len(prompt_display)
-            max_input_width = max(10, max_x - input_x - 1)
+            try:
+                stdscr.leaveok(False)
+                leaveok_changed = True
+            except curses.error:
+                pass
+            except Exception:
+                pass
+            try:
+                curses.curs_set(1)
+            except curses.error:
+                pass
 
-            stdscr.move(prompt_y, 0)
-            stdscr.clrtoeol()
-            stdscr.addstr(prompt_y, 0, prompt_display)
-            stdscr.refresh()
+            self._render_prompt_input(
+                stdscr, prompt_y, max_x, prompt_display, text, cursor
+            )
 
             while True:
-                key = stdscr.getch()
+                key, meta = self._read_key_with_meta(stdscr)
 
                 if key in (10, 13, curses.KEY_ENTER):
                     break
-                if key == 27:
-                    input_str = ""
+                if key == 27 and meta is None:
+                    text = ""
                     break
-                if key in (curses.KEY_BACKSPACE, 127, 8):
-                    if input_str:
-                        input_str = input_str[:-1]
-                elif 32 <= key <= 126 and len(input_str) < max_input_width:
-                    input_str += chr(key)
 
-                stdscr.move(prompt_y, 0)
-                stdscr.clrtoeol()
-                display_str = prompt_display + input_str
-                stdscr.addstr(prompt_y, 0, display_str[: max_x - 1])
-                stdscr.refresh()
+                handled = False
+                if key == 27 and meta is not None:
+                    if meta in (ord("b"), ord("B")):
+                        cursor = self._move_word_left(text, cursor)
+                        handled = True
+                    elif meta in (ord("f"), ord("F")):
+                        cursor = self._move_word_right(text, cursor)
+                        handled = True
+                    elif meta in (127, 8, curses.KEY_BACKSPACE):
+                        text, cursor = self._delete_prev_word(text, cursor)
+                        handled = True
+                elif key in (curses.KEY_BACKSPACE, 127, 8):
+                    if cursor > 0:
+                        text = text[: cursor - 1] + text[cursor:]
+                        cursor -= 1
+                    handled = True
+                elif key == curses.KEY_DC:
+                    if cursor < len(text):
+                        text = text[:cursor] + text[cursor + 1 :]
+                    handled = True
+                elif key in (curses.KEY_LEFT, 2):  # Left / Ctrl+B
+                    cursor = max(0, cursor - 1)
+                    handled = True
+                elif key in (curses.KEY_RIGHT, 6):  # Right / Ctrl+F
+                    cursor = min(len(text), cursor + 1)
+                    handled = True
+                elif key in (curses.KEY_HOME, 1):  # Home / Ctrl+A
+                    cursor = 0
+                    handled = True
+                elif key in (curses.KEY_END, 5):  # End / Ctrl+E
+                    cursor = len(text)
+                    handled = True
+                elif key == 23:  # Ctrl+W
+                    text, cursor = self._delete_prev_word(text, cursor)
+                    handled = True
+                elif 32 <= key <= 126 and len(text) < max_input_width:
+                    text = text[:cursor] + chr(key) + text[cursor:]
+                    cursor += 1
+                    handled = True
+
+                if handled:
+                    self._render_prompt_input(
+                        stdscr, prompt_y, max_x, prompt_display, text, cursor
+                    )
         except KeyboardInterrupt:
-            input_str = ""
+            text = ""
         except Exception:
-            input_str = ""
+            text = ""
         finally:
             stdscr.timeout(40)
+            if leaveok_changed:
+                try:
+                    stdscr.leaveok(True)
+                except curses.error:
+                    pass
+                except Exception:
+                    pass
+            try:
+                curses.curs_set(0)
+            except curses.error:
+                pass
             self.nav.need_redraw = True
 
-        result = input_str.strip()
+        result = text.strip() if strip_result else text
         return result or None
 
     def prompt_for_input(self, prompt: str) -> Optional[str]:
@@ -927,48 +1047,7 @@ class FileActionService:
         parent_dir = os.path.dirname(selected_path)
 
         prompt = "Rename: "
-        prompt_y = max_y - 1
-
-        stdscr.move(prompt_y, 0)
-        stdscr.clrtoeol()
-
-        try:
-            stdscr.addstr(prompt_y, 0, prompt[: max_x - 1])
-        except curses.error:
-            pass
-
-        try:
-            stdscr.timeout(-1)
-            max_input_width = max(10, max_x - len(prompt) - 1)
-            input_str = selected_name
-
-            while True:
-                stdscr.move(prompt_y, 0)
-                stdscr.clrtoeol()
-                display_str = prompt + input_str
-                stdscr.addstr(prompt_y, 0, display_str[: max_x - 1])
-                stdscr.refresh()
-
-                key = stdscr.getch()
-                if key in (10, 13, curses.KEY_ENTER):
-                    break
-                if key == 27:
-                    input_str = ""
-                    break
-                if key in (curses.KEY_BACKSPACE, 127, 8):
-                    if input_str:
-                        input_str = input_str[:-1]
-                elif 32 <= key <= 126 and len(input_str) < max_input_width:
-                    input_str += chr(key)
-        except KeyboardInterrupt:
-            input_str = ""
-        except Exception:
-            input_str = ""
-        finally:
-            stdscr.timeout(40)
-            self.nav.need_redraw = True
-
-        new_name = input_str.strip()
+        new_name = self._prompt_for_input(prompt, initial_text=selected_name)
         if not new_name or new_name == selected_name:
             return
 
@@ -978,6 +1057,7 @@ class FileActionService:
         try:
             os.rename(selected_path, new_path)
         except Exception as e:
+            prompt_y = max_y - 1
             stdscr.addstr(
                 prompt_y,
                 0,
