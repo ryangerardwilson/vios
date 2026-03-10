@@ -11,6 +11,7 @@ import sys
 from typing import Sequence
 from urllib.parse import urlparse, unquote
 
+import config
 from orchestrator import Orchestrator
 from core_navigator import PickerOptions
 
@@ -32,6 +33,7 @@ def _print_help() -> None:
         "o - Vim-inspired terminal file navigator\n\n"
         "Usage:\n"
         "  o [path]     Launch the TUI (optional start path)\n"
+        "  o conf       Open config in $VISUAL/$EDITOR\n"
         "  o -h         Show this help\n"
         "  o -v         Show installed version\n"
         "  o -u         Reinstall latest release if a newer version exists\n"
@@ -44,6 +46,19 @@ def _print_help() -> None:
         "  -m           Allow multi-select via marks\n"
         "  -se [ext]    Save extension (save mode only)"
     )
+
+
+def _open_config_in_editor() -> int:
+    config_path = os.path.realpath(os.path.expanduser(config.get_config_path()))
+    os.makedirs(os.path.dirname(config_path), exist_ok=True)
+    if not os.path.exists(config_path):
+        with open(config_path, "w", encoding="utf-8") as handle:
+            handle.write("{}\n")
+    editor = (os.environ.get("VISUAL") or os.environ.get("EDITOR") or "vim").strip()
+    editor_cmd = shlex.split(editor) if editor else ["vim"]
+    if not editor_cmd:
+        editor_cmd = ["vim"]
+    return subprocess.run([*editor_cmd, config_path], check=False).returncode
 
 
 def _run_upgrade() -> int:
@@ -267,6 +282,8 @@ def _parse_args(
 
 def main(argv: list[str] | None = None) -> int:
     args = sys.argv[1:] if argv is None else argv
+    if args == ["conf"]:
+        return _open_config_in_editor()
     picker_options = None
     start_path = None
     reveal_path = None
