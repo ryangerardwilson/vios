@@ -96,13 +96,9 @@ def _launch_terminal_command(
             continue
         if shutil.which(cmd[0]) is None:
             continue
-        launch_cmd = list(cmd)
-        if any("{cmd}" in token for token in launch_cmd):
-            launch_cmd = [
-                token.replace("{cmd}", " ".join(command)) for token in launch_cmd
-            ]
-        else:
-            launch_cmd.extend(["-e"] + command)
+        launch_cmd = _build_terminal_launch_command(cmd, command)
+        if not launch_cmd:
+            continue
         try:
             subprocess.Popen(
                 launch_cmd,
@@ -118,6 +114,22 @@ def _launch_terminal_command(
             continue
 
     return False
+
+
+def _build_terminal_launch_command(
+    terminal_cmd: list[str], command: list[str]
+) -> list[str]:
+    launch_cmd = list(terminal_cmd)
+    if any("{cmd}" in token for token in launch_cmd):
+        return [token.replace("{cmd}", " ".join(command)) for token in launch_cmd]
+
+    terminal_name = os.path.basename(launch_cmd[0])
+    if terminal_name == "xdg-terminal-exec":
+        launch_cmd.extend(["--"] + command)
+        return launch_cmd
+
+    launch_cmd.extend(["-e"] + command)
+    return launch_cmd
 
 
 def _normalize_target_path(path: str) -> str:

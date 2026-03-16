@@ -20,6 +20,24 @@ sys.modules.setdefault("rgw_cli_contract", rgw_cli_contract)
 import main
 
 
+def test_build_terminal_launch_command_uses_double_dash_for_xdg_terminal_exec():
+    command = main._build_terminal_launch_command(
+        ["xdg-terminal-exec"],
+        ["vim", "/tmp/test.md"],
+    )
+
+    assert command == ["xdg-terminal-exec", "--", "vim", "/tmp/test.md"]
+
+
+def test_build_terminal_launch_command_uses_dash_e_for_regular_terminals():
+    command = main._build_terminal_launch_command(
+        ["alacritty"],
+        ["vim", "/tmp/test.md"],
+    )
+
+    assert command == ["alacritty", "-e", "vim", "/tmp/test.md"]
+
+
 def test_dispatch_opens_positional_file_detached(monkeypatch, tmp_path):
     target = tmp_path / "note.txt"
     target.write_text("hello\n", encoding="utf-8")
