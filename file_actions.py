@@ -5,10 +5,16 @@ import selectors
 import shlex
 import shutil
 import subprocess
+import sys
 import threading
 import time
 import zipfile
 from typing import Optional, cast, Any, List, Tuple
+
+try:
+    import termios
+except ImportError:  # pragma: no cover
+    termios = None  # type: ignore[assignment]
 
 from config import HandlerSpec
 
@@ -66,6 +72,26 @@ def is_text_like_file(filepath: str, mime_type: Optional[str] = None) -> bool:
         (mime_type and mime_type.startswith("text/"))
         or ext_lower in TEXT_LIKE_EXTENSIONS
     )
+
+
+def flush_terminal_input() -> None:
+    try:
+        curses.flushinp()
+    except curses.error:
+        pass
+    except Exception:
+        pass
+
+    if termios is None:
+        return
+
+    try:
+        stdin = sys.stdin
+        if stdin is None or not stdin.isatty():
+            return
+        termios.tcflush(stdin.fileno(), termios.TCIFLUSH)
+    except Exception:
+        pass
 
 
 class ExecutionJob:
@@ -527,14 +553,9 @@ class FileActionService:
         return handled
 
     def _open_with_vim(self, filepath: str) -> bool:
+        flush_terminal_input()
         stdscr_opt = self.nav.renderer.stdscr
         if stdscr_opt is not None:
-            try:
-                curses.flushinp()
-            except curses.error:
-                pass
-            except Exception:
-                pass
             try:
                 curses.def_prog_mode()
             except curses.error:

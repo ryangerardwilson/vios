@@ -336,6 +336,9 @@ def _resolve_internal_vim_command(filepaths: list[str]) -> list[str] | None:
 
 
 def _run_internal_command(command: list[str]) -> bool:
+    from file_actions import flush_terminal_input
+
+    flush_terminal_input()
     try:
         return subprocess.call(command) == 0
     except FileNotFoundError:

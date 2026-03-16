@@ -195,13 +195,20 @@ def test_open_with_vim_flushes_pending_input(monkeypatch, tmp_path):
     service = FileActionService(nav)
 
     calls = []
+    fake_stdin = SimpleNamespace(isatty=lambda: True, fileno=lambda: 0)
 
     monkeypatch.setattr(file_actions.shutil, "which", lambda name: "/usr/bin/vim")
+    monkeypatch.setattr(file_actions.sys, "stdin", fake_stdin)
     monkeypatch.setattr(
         file_actions.subprocess, "call", lambda argv: calls.append(argv) or 0
     )
     monkeypatch.setattr(
         file_actions.curses, "flushinp", lambda: calls.append("flush")
+    )
+    monkeypatch.setattr(
+        file_actions.termios,
+        "tcflush",
+        lambda _fd, _mode: calls.append("tcflush"),
     )
     monkeypatch.setattr(file_actions.curses, "def_prog_mode", lambda: calls.append("def"))
     monkeypatch.setattr(file_actions.curses, "endwin", lambda: calls.append("end"))
@@ -215,4 +222,4 @@ def test_open_with_vim_flushes_pending_input(monkeypatch, tmp_path):
     )
 
     assert service._open_with_vim(str(target)) is True
-    assert calls[:4] == ["flush", "def", "end", ["vim", str(target)]]
+    assert calls[:5] == ["flush", "tcflush", "def", "end", ["vim", str(target)]]
