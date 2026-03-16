@@ -97,8 +97,11 @@ python main.py /path/to/file.txt
 - If multiple positional targets are provided, they must all be files; `o`
   opens each one detached and then exits.
 - Text/editor handlers open in a detached terminal so the current shell is not
-  taken over. With multiple text files, `o` launches one detached editor
-  session per file.
+  taken over. If multiple text files do not resolve to `vim`, `o` launches one
+  detached editor session per file.
+- Exception: if all positional targets are text-like files and the editor
+  resolves to `vim`, `o` runs one in-terminal `vim file1 file2 ...` session so
+  the files open as Vim buffers.
 - Directory targets still start the navigator UI as usual.
 
 ### Picker mode

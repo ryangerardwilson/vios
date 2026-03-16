@@ -39,6 +39,34 @@ MEDIA_VIDEO_EXTENSIONS = {
     ".wmv",
 }
 
+TEXT_LIKE_EXTENSIONS = {
+    ".py",
+    ".txt",
+    ".md",
+    ".json",
+    ".yaml",
+    ".yml",
+    ".toml",
+    ".cfg",
+    ".ini",
+    ".sh",
+    ".c",
+    ".cpp",
+    ".h",
+    ".hpp",
+}
+
+
+def is_text_like_file(filepath: str, mime_type: Optional[str] = None) -> bool:
+    if mime_type is None:
+        mime_type, _ = mimetypes.guess_type(filepath)
+    _, ext = os.path.splitext(filepath)
+    ext_lower = ext.lower()
+    return bool(
+        (mime_type and mime_type.startswith("text/"))
+        or ext_lower in TEXT_LIKE_EXTENSIONS
+    )
+
 
 class ExecutionJob:
     def __init__(self, filepath: str, command: List[str], display: str, mode: str):
@@ -476,26 +504,7 @@ class FileActionService:
                     detached=detached,
                 )
             else:
-                is_text_like = bool(
-                    (mime_type and mime_type.startswith("text/"))
-                    or ext_lower
-                    in {
-                        ".py",
-                        ".txt",
-                        ".md",
-                        ".json",
-                        ".yaml",
-                        ".yml",
-                        ".toml",
-                        ".cfg",
-                        ".ini",
-                        ".sh",
-                        ".c",
-                        ".cpp",
-                        ".h",
-                        ".hpp",
-                    }
-                )
+                is_text_like = is_text_like_file(filepath, mime_type)
                 handled = self._invoke_handler(
                     self.nav.config.get_handler_spec("editor"),
                     filepath,

@@ -280,6 +280,75 @@ def _open_file_detached(filepath: str) -> tuple[bool, str]:
     return opened, str(nav.status_message or "")
 
 
+def _expand_multi_file_command(
+    raw_cmd: list[str], filepaths: list[str]
+) -> list[str] | None:
+    if not raw_cmd:
+        return None
+
+    tokens: list[str] = []
+    has_placeholder = False
+
+    for part in raw_cmd:
+        if not isinstance(part, str):
+            continue
+        if part == "{file}":
+            tokens.extend(filepaths)
+            has_placeholder = True
+            continue
+        if "{file}" in part:
+            if len(filepaths) != 1:
+                return None
+            part = part.replace("{file}", filepaths[0])
+            has_placeholder = True
+        tokens.append(part)
+
+    if not tokens:
+        return None
+
+    if not has_placeholder:
+        tokens.extend(filepaths)
+
+    return tokens
+
+
+def _resolve_internal_vim_command(filepaths: list[str]) -> list[str] | None:
+    from file_actions import is_text_like_file
+
+    if not filepaths or not all(is_text_like_file(path) for path in filepaths):
+        return None
+
+    editor_spec = config.USER_CONFIG.get_handler_spec("editor")
+    for raw_cmd in editor_spec.commands:
+        tokens = _expand_multi_file_command(raw_cmd, filepaths)
+        if not tokens:
+            continue
+        if shutil.which(tokens[0]) is None:
+            continue
+        if tokens[0] == "vim":
+            return tokens
+        return None
+
+    fallback = _expand_multi_file_command(["vim"], filepaths)
+    if fallback and shutil.which("vim"):
+        return fallback
+    return None
+
+
+def _run_internal_command(command: list[str]) -> bool:
+    try:
+        return subprocess.call(command) == 0
+    except FileNotFoundError:
+        print(f"{command[0]}: command not found", file=sys.stderr)
+        return False
+    except Exception as exc:
+        print(
+            f"Failed to launch {command[0]}: {exc.__class__.__name__}",
+            file=sys.stderr,
+        )
+        return False
+
+
 def _open_files_detached(filepaths: list[str]) -> bool:
     failures: list[tuple[str, str]] = []
 
@@ -315,8 +384,14 @@ def _dispatch(args: list[str]) -> int:
         ]
         if len(direct_targets) > 1:
             if any(not os.path.isfile(target) for target in direct_targets):
-                print("Multiple positional targets must all be files", file=sys.stderr)
+                print(
+                    "Multiple positional targets must all be files",
+                    file=sys.stderr,
+                )
                 return 1
+            vim_command = _resolve_internal_vim_command(direct_targets)
+            if vim_command is not None:
+                return 0 if _run_internal_command(vim_command) else 1
             return 0 if _open_files_detached(direct_targets) else 1
 
         direct_target = direct_targets[0]

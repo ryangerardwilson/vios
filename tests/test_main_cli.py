@@ -45,8 +45,8 @@ def test_dispatch_opens_positional_file_detached(monkeypatch, tmp_path):
 
 
 def test_dispatch_opens_multiple_positional_files_detached(monkeypatch, tmp_path):
-    first = tmp_path / "one.txt"
-    second = tmp_path / "two.txt"
+    first = tmp_path / "one.bin"
+    second = tmp_path / "two.bin"
     first.write_text("one\n", encoding="utf-8")
     second.write_text("two\n", encoding="utf-8")
 
@@ -68,6 +68,49 @@ def test_dispatch_opens_multiple_positional_files_detached(monkeypatch, tmp_path
 
     assert result == 0
     assert opened == [str(first.resolve()), str(second.resolve())]
+
+
+def test_dispatch_opens_multiple_text_files_in_internal_vim(monkeypatch, tmp_path):
+    first = tmp_path / "one.md"
+    second = tmp_path / "two.py"
+    first.write_text("# one\n", encoding="utf-8")
+    second.write_text("print('two')\n", encoding="utf-8")
+
+    launched = []
+
+    monkeypatch.setattr(
+        main.shutil,
+        "which",
+        lambda name: "/usr/bin/vim" if name == "vim" else None,
+    )
+    monkeypatch.setattr(
+        main.config,
+        "USER_CONFIG",
+        SimpleNamespace(
+            get_handler_spec=lambda _name: main.config.HandlerSpec(
+                commands=[],
+                is_internal=False,
+            )
+        ),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        main.subprocess,
+        "call",
+        lambda argv: launched.append(list(argv)) or 0,
+    )
+    monkeypatch.setattr(
+        main,
+        "_open_file_detached",
+        lambda _path: (_ for _ in ()).throw(
+            AssertionError("detached open should not be used for multi-file vim")
+        ),
+    )
+
+    result = main._dispatch([str(first), str(second)])
+
+    assert result == 0
+    assert launched == [["vim", str(first.resolve()), str(second.resolve())]]
 
 
 def test_dispatch_rejects_non_file_multi_target(monkeypatch, tmp_path, capsys):
