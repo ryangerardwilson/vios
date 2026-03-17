@@ -1,2 +1,2 @@
 # No external dependencies required for packaging.
-rgw-cli-contract==0.1.1
+rgw-cli-contract==0.1.2
