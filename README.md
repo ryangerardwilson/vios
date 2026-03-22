@@ -22,10 +22,15 @@ install the latest release is via the helper script:
 curl -fsSL https://raw.githubusercontent.com/ryangerardwilson/o/main/install.sh | bash
 ```
 
+Manually add this to `~/.bashrc`, then reload your shell:
+
+```bash
+export PATH="$HOME/.o/bin:$PATH"
+source ~/.bashrc
+```
+
 The script downloads the `o-linux-x64.tar.gz` artifact, extracts it into
-`~/.o/app`, and drops a shim in `~/.o/bin`. It will attempt to add that
-directory to your `PATH` (unless you opt out) so you can just run `o` from any
-shell.
+`~/.o/app`, and drops a shim in `~/.o/bin`.
 
 The installer also creates a desktop entry for reveal mode and sets it as the
 default handler for directories and file URLs (so "Show in folder" can open `o`
@@ -41,8 +46,7 @@ Installer flags of note:
 - `-b /path/to/o-linux-x64.tar.gz`: install from a previously downloaded
   archive.
 - `-h`: show usage information for the installer.
-- `--no-modify-path`: skip auto-updating shell config files; the script will
-  print the PATH export you should add manually.
+- `--no-modify-path`: compatibility no-op alias; the installer never edits shell config files automatically.
 
 Once installed, the binary itself also supports:
 
